@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width" />
+        <link rel="stylesheet" href="css/style.css" />
+        <script src="https://d3js.org/d3.v5.min.js"></script>
+        <script src="https://d3js.org/topojson.v2.min.js"></script>
+        <script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
+        <script src="https://d3js.org/d3-geo-projection.v2.min.js"></script>
+        <script src="js/script.js"></script>
+
+        <title>航空業面臨疫情之影響</title>
+    </head>
+
+    <body>
+        <svg></svg>
+        <div class="controller">
+            <input
+                type="range"
+                min="2015"
+                max="2019"
+                value="104"
+                class="slider"
+                id="year-slider"
+            />
+        </div>
+        <div class="info">
+            <div class="content"></div>
+        </div>
+    </body>
+</html>

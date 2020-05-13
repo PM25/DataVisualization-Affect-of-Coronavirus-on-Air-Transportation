@@ -1,0 +1,138 @@
+body {
+    margin: 0;
+    background-color: #588da8;
+    color: #333;
+}
+
+.container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.container > span {
+    font-size: 1.7em;
+}
+
+svg {
+    width: 100vw;
+    height: 100vh;
+}
+
+.controller {
+    position: fixed;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    right: 0;
+    top: 0;
+    width: 35vw;
+    height: 30vh;
+    background-color: #ddda;
+    border-radius: 2em;
+    margin: 1em;
+    padding: 0.5em;
+
+    -moz-box-sizing: border-box;
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+}
+
+.controller > .title {
+    font-size: 1.7em;
+    margin-bottom: 0.5em;
+}
+
+#controller-year {
+    font-size: 1.6em;
+}
+
+.slider {
+    -webkit-appearance: none; /* Override default CSS styles */
+    appearance: none;
+    width: 100%; /* Full-width */
+    height: 1.3em; /* Specified height */
+    background: #fff5; /* Grey background */
+    outline: none; /* Remove outline */
+    opacity: 0.6; /* Set transparency (for mouse-over effects on hover) */
+    -webkit-transition: 0.3s; /* 0.2 seconds transition on hover */
+    transition: opacity 0.3s;
+    border-radius: 1em;
+}
+
+.slider:hover {
+    opacity: 1;
+}
+
+.slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 1.2em;
+    height: 2em;
+    border-radius: 0.3em;
+    background: #4caf50;
+    cursor: pointer;
+}
+
+.slider::-moz-range-thumb {
+    width: 1.2em;
+    height: 2em;
+    border-radius: 0.3em;
+    background: #4caf50;
+    cursor: pointer;
+}
+
+.info {
+    position: fixed;
+    display: flex;
+    flex-direction: column;
+    /* justify-content: center; */
+
+    right: 0;
+    bottom: 0;
+    width: 35vw;
+    height: 60vh;
+    background-color: #ddda;
+    border-radius: 2em;
+    margin: 1em;
+    margin-top: 0;
+    padding: 1em;
+
+    -moz-box-sizing: border-box;
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+}
+
+.info > .title {
+    text-align: center;
+    font-size: 1.5em;
+    margin: 0.2em;
+}
+
+.info > .content {
+    font-size: 1.1em;
+}
+
+.world {
+    fill: #639a67;
+    cursor: pointer;
+}
+
+.world:hover {
+    fill: #333;
+}
+
+.boundary {
+    fill: none;
+    stroke: #000;
+    stroke-width: 0.01em;
+}
+
+#pallete:hover {
+    /* transform: scale(2); */
+    transition: 0.5s;
+    cursor: pointer;
+}
