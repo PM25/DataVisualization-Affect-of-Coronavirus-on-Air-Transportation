@@ -7,10 +7,12 @@ function main() {
     var svg = d3.select("svg");
 
     var projection = d3
-        .geoMercator()
+        // .geoMercator()
+        .geoOrthographic()
         .center([121, 24]) // 中心點(經緯度)
-        .scale(200) // 放大倍率
-        .translate([width / 3, height / 2.5]) // 置中
+        .scale(250) // 放大倍率
+        // .translate([width / 3, height / 2.5]) // 置中
+        .translate([width / 3, height / 3]) // 置中
         .precision(0.1);
     var path = d3.geoPath().projection(projection);
 
@@ -23,7 +25,7 @@ function main() {
     }
 
     var files = [
-        "https://unpkg.com/world-atlas@1/world/50m.json",
+        "https://unpkg.com/world-atlas@1/world/110m.json",
         "data/flights.csv",
     ];
 
@@ -37,7 +39,12 @@ function main() {
         }
     });
 
-    taiwan_coords = [25.033, 121.5654];
+    taiwan_coords = [121.5654, 25.033];
+    const config = {
+        speed: 0.005,
+        verticalTilt: -30,
+        horizontalTilt: 0,
+    };
     Promise.all(promises).then(function (values) {
         // Draw Map
         world = values[0];
@@ -57,22 +64,58 @@ function main() {
             .attr("d", path)
             .attr("class", "boundary");
 
+        // drawGraticule();
+
         // Top 10 flight export countries
         flights_data = values[1];
 
         var links = [];
-        for (let i = 0; i < 10; ++i) {
+        for (let i = 0; i < 14; ++i) {
             let country = flights_data[i]["國家"];
-            let coords = [
-                parseFloat(flights_data[i]["經度"]),
+            let target_coords = [
                 parseFloat(flights_data[i]["緯度"]),
+                parseFloat(flights_data[i]["經度"]),
             ];
 
             links.push({
                 type: "LineString",
-                country: country,
-                coordinates: [taiwan_coords, coords],
+                // country: country,
+                coordinates: [taiwan_coords, target_coords],
             });
+        }
+
+        svg.selectAll("MyPath")
+            .data(links)
+            .enter()
+            .append("path")
+            .attr("d", (d) => path(d))
+            .style("fill", "none")
+            .style("stroke", "orange")
+            .style("stroke-width", 0.35);
+
+        drawGraticule();
+        enableRotation();
+        function enableRotation() {
+            d3.timer(function (elapsed) {
+                projection.rotate([
+                    config.speed * elapsed - 120,
+                    config.verticalTilt,
+                    config.horizontalTilt,
+                ]);
+                svg.selectAll("path").attr("d", path);
+            });
+        }
+
+        function drawGraticule() {
+            const graticule = d3.geoGraticule().step([10, 10]);
+
+            svg.append("path")
+                .datum(graticule)
+                .attr("class", "graticule")
+                .attr("d", path)
+                .style("fill", "transparent")
+                .style("stroke", "#cccc")
+                .style("stroke-width", 0.2);
         }
     });
 }
