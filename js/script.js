@@ -7,17 +7,39 @@ function main() {
     var svg = d3.select("svg");
 
     var projection = d3
-        // .geoMercator()
         .geoOrthographic()
-        .center([121, 24]) // 中心點(經緯度)
-        .scale(250) // 放大倍率
-        // .translate([width / 3, height / 2.5]) // 置中
-        .translate([width / 3, height / 3]) // 置中
-        .precision(0.1);
+        .scale(500) // 放大倍率
+        .center([0, 0])
+        .rotate([-121.5654, -25.033])
+        .translate([width / 2, height / 2]); // 置中
     var path = d3.geoPath().projection(projection);
 
+    const initialScale = projection.scale();
     const zoom = d3.zoom().scaleExtent([0.6, 10]).on("zoom", zoomed);
-    svg.call(zoom);
+    const sensitivity = 30;
+    // svg.call(
+    //     d3.drag().on("drag", () => {
+    //         const rotate = projection.rotate();
+    //         const k = sensitivity / projection.scale();
+    //         projection.rotate([
+    //             rotate[0] + d3.event.dx * k,
+    //             rotate[1] - d3.event.dy * k,
+    //         ]);
+    //         path = d3.geoPath().projection(projection);
+    //         svg.selectAll("path").attr("d", path);
+    //     })
+    // ).call(
+    //     d3.zoom().on("zoom", () => {
+    //         if (d3.event.transform.k > 0.3) {
+    //             projection.scale(initialScale * d3.event.transform.k);
+    //             path = d3.geoPath().projection(projection);
+    //             svg.selectAll("path").attr("d", path);
+    //             globe.attr("r", projection.scale());
+    //         } else {
+    //             d3.event.transform.k = 0.3;
+    //         }
+    //     })
+    // );
 
     function zoomed() {
         svg.selectAll("path") // To prevent stroke width from scaling
@@ -41,7 +63,7 @@ function main() {
 
     taiwan_coords = [121.5654, 25.033];
     const config = {
-        speed: 0.005,
+        speed: 0.001,
         verticalTilt: -30,
         horizontalTilt: 0,
     };
@@ -50,6 +72,16 @@ function main() {
         world = values[0];
 
         world = topojson.feature(world, world.objects.countries);
+
+        let globe = svg
+            .append("circle")
+            .attr("fill", "#588da8")
+            .attr("stroke", "#000")
+            .attr("stroke-width", "0.2")
+            .attr("cx", width / 2)
+            .attr("cy", height / 2)
+            .attr("r", initialScale)
+            .attr("class", "globe");
 
         svg.selectAll("path")
             .data(world.features)
@@ -64,13 +96,13 @@ function main() {
             .attr("d", path)
             .attr("class", "boundary");
 
-        // drawGraticule();
+        drawGraticule();
 
         // Top 10 flight export countries
         flights_data = values[1];
 
         var links = [];
-        for (let i = 0; i < 14; ++i) {
+        for (let i = 0; i < 10; ++i) {
             let country = flights_data[i]["國家"];
             let target_coords = [
                 parseFloat(flights_data[i]["緯度"]),
@@ -79,31 +111,67 @@ function main() {
 
             links.push({
                 type: "LineString",
-                // country: country,
+                target_country: country,
                 coordinates: [taiwan_coords, target_coords],
             });
         }
 
-        svg.selectAll("MyPath")
+        let myLinks = svg
+            .selectAll("MyPath")
             .data(links)
             .enter()
             .append("path")
             .attr("d", (d) => path(d))
+            .attr("class", "link")
             .style("fill", "none")
-            .style("stroke", "orange")
-            .style("stroke-width", 0.35);
+            .style("stroke-width", initialScale / 200);
+        // .style("stroke", "#ffb36799")
+        // .style("stroke-width", 0.4);
 
-        drawGraticule();
-        enableRotation();
-        function enableRotation() {
-            d3.timer(function (elapsed) {
+        svg.call(
+            d3.drag().on("drag", () => {
+                const rotate = projection.rotate();
+                const k = sensitivity / projection.scale();
                 projection.rotate([
-                    config.speed * elapsed - 120,
-                    config.verticalTilt,
-                    config.horizontalTilt,
+                    rotate[0] + d3.event.dx * k,
+                    rotate[1] - d3.event.dy * k,
                 ]);
+                path = d3.geoPath().projection(projection);
                 svg.selectAll("path").attr("d", path);
-            });
+            })
+        ).call(
+            d3.zoom().on("zoom", () => {
+                if (d3.event.transform.k > 0.3) {
+                    projection.scale(initialScale * d3.event.transform.k);
+                    path = d3.geoPath().projection(projection);
+                    svg.selectAll("path").attr("d", path);
+                    globe.attr("r", projection.scale());
+                    myLinks.style("stroke-width", projection.scale() / 200);
+                } else {
+                    d3.event.transform.k = 0.3;
+                }
+            })
+        );
+
+        // drawGraticule();
+        // enableRotation();
+        function enableRotation() {
+            // d3.timer(function (elapsed) {
+            //     projection.rotate([
+            //         config.speed * elapsed - 120,
+            //         config.verticalTilt,
+            //         config.horizontalTilt,
+            //     ]);
+            //     svg.selectAll("path").attr("d", path);
+            // });
+            //Optional rotate
+            d3.timer(function (elapsed) {
+                const rotate = projection.rotate();
+                const k = sensitivity / projection.scale();
+                projection.rotate([rotate[0] - 1 * k, rotate[1]]);
+                path = d3.geoPath().projection(projection);
+                svg.selectAll("path").attr("d", path);
+            }, 1000);
         }
 
         function drawGraticule() {
@@ -113,7 +181,7 @@ function main() {
                 .datum(graticule)
                 .attr("class", "graticule")
                 .attr("d", path)
-                .style("fill", "transparent")
+                .style("fill", "none")
                 .style("stroke", "#cccc")
                 .style("stroke-width", 0.2);
         }

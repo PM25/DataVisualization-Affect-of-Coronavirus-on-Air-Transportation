@@ -1,6 +1,6 @@
 body {
     margin: 0;
-    background-color: #588da8;
+    background-color: #ddd;
     color: #333;
 }
 
@@ -30,7 +30,7 @@ svg {
     bottom: 0;
     width: 35vw;
     height: 60vh;
-    background-color: #ddda;
+    background-color: #ddd;
     border-radius: 2em;
     margin: 1em;
     margin-top: 0;
@@ -69,5 +69,19 @@ svg {
 #pallete:hover {
     /* transform: scale(2); */
     transition: 0.5s;
+    cursor: pointer;
+}
+
+.link {
+    stroke: #ffb367;
+    opacity: 0.25;
+    cursor: pointer;
+}
+
+.link:hover {
+    opacity: 1;
+}
+
+.globe:hover {
     cursor: pointer;
 }
