@@ -116,6 +116,13 @@ function main() {
             });
         }
 
+        var line = d3.line().curve(d3.curveBasis);
+        // var path = svg
+        //     .append("path")
+        //     .attr("d", line(lineData))
+        //     .style("stroke", "black")
+        //     .style("fill", "none");
+
         let myLinks = svg
             .selectAll("MyPath")
             .data(links)
@@ -124,9 +131,37 @@ function main() {
             .attr("d", (d) => path(d))
             .attr("class", "link")
             .style("fill", "none")
-            .style("stroke-width", initialScale / 200);
+            .style("stroke-width", initialScale / 200)
+            .call(transition)
+            .call(foo);
+        // .transition()
+        // .duration(1000)
+        // .attrTween("stroke-dasharray", tweenDash);
+
         // .style("stroke", "#ffb36799")
         // .style("stroke-width", 0.4);
+
+        function transition(path) {
+            path.transition()
+                .duration(1000)
+                // .attrTween("stroke-dasharray", tweenDash)
+                .attrTween("stroke-dasharray", tweenDash);
+        }
+
+        function tweenDash() {
+            var l = this.getTotalLength(),
+                i = d3.interpolateString("0," + l, l + "," + l);
+            return function (t) {
+                return i(t);
+            };
+        }
+
+        function foo(path) {
+            path.style("stroke-dasharray", "none");
+            // myLinks.style("stroke-dasharray", "none");
+        }
+
+        // console.log();
 
         svg.call(
             d3.drag().on("drag", () => {
@@ -141,14 +176,17 @@ function main() {
             })
         ).call(
             d3.zoom().on("zoom", () => {
-                if (d3.event.transform.k > 0.3) {
+                if (d3.event.transform.k < 0.3) {
+                    d3.event.transform.k = 0.3;
+                } else if (d3.event.transform.k > 15) {
+                    d3.event.transform.k = 15;
+                } else {
                     projection.scale(initialScale * d3.event.transform.k);
                     path = d3.geoPath().projection(projection);
                     svg.selectAll("path").attr("d", path);
                     globe.attr("r", projection.scale());
                     myLinks.style("stroke-width", projection.scale() / 200);
-                } else {
-                    d3.event.transform.k = 0.3;
+                    // myLinks.style("stroke-dasharray", "none");
                 }
             })
         );
