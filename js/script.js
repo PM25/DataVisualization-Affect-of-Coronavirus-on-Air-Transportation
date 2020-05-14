@@ -132,8 +132,11 @@ function main() {
             .attr("class", "link")
             .style("fill", "none")
             .style("stroke-width", initialScale / 200)
-            .call(transition)
-            .on("end", foo);
+            .call(transition);
+        // .transition()
+        // .duration(1000)
+        // .attrTween("stroke-dasharray", tweenDash)
+        // .attrTween("stroke-dasharray", tweenDash);
 
         // .transition()
         // .duration(1000)
@@ -145,8 +148,10 @@ function main() {
         function transition(path) {
             path.transition()
                 .duration(1000)
-                // .attrTween("stroke-dasharray", tweenDash)
-                .attrTween("stroke-dasharray", tweenDash);
+                .attrTween("stroke-dasharray", tweenDash)
+                .on("end", function (d, i) {
+                    d3.select(this).style("stroke-dasharray", "none");
+                });
         }
 
         function tweenDash() {
@@ -156,13 +161,6 @@ function main() {
                 return i(t);
             };
         }
-
-        function foo(path) {
-            path.style("stroke-dasharray", "none");
-            // myLinks.style("stroke-dasharray", "none");
-        }
-
-        // console.log();
 
         svg.call(
             d3.drag().on("drag", () => {
@@ -187,30 +185,19 @@ function main() {
                     svg.selectAll("path").attr("d", path);
                     globe.attr("r", projection.scale());
                     myLinks.style("stroke-width", projection.scale() / 200);
-                    // myLinks.style("stroke-dasharray", "none");
                 }
             })
         );
 
-        // drawGraticule();
         // enableRotation();
         function enableRotation() {
-            // d3.timer(function (elapsed) {
-            //     projection.rotate([
-            //         config.speed * elapsed - 120,
-            //         config.verticalTilt,
-            //         config.horizontalTilt,
-            //     ]);
-            //     svg.selectAll("path").attr("d", path);
-            // });
-            //Optional rotate
             d3.timer(function (elapsed) {
                 const rotate = projection.rotate();
                 const k = sensitivity / projection.scale();
                 projection.rotate([rotate[0] - 1 * k, rotate[1]]);
                 path = d3.geoPath().projection(projection);
                 svg.selectAll("path").attr("d", path);
-            }, 1000);
+            }, 300);
         }
 
         function drawGraticule() {
