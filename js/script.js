@@ -133,7 +133,8 @@ function main() {
             .style("fill", "none")
             .style("stroke-width", initialScale / 200)
             .call(transition)
-            .call(foo);
+            .on("end", foo);
+
         // .transition()
         // .duration(1000)
         // .attrTween("stroke-dasharray", tweenDash);
