@@ -1,6 +1,8 @@
+@import url("https://use.fontawesome.com/releases/v5.5.0/css/all.css");
+
 body {
     margin: 0;
-    background-color: #ddd;
+    background-color: #eae7d9;
     color: #333;
 }
 
@@ -51,6 +53,61 @@ svg {
     font-size: 1.1em;
 }
 
+/* Home-nav */
+#home-nav {
+    position: fixed;
+    display: block;
+    user-select: none;
+    background-color: rgba(255, 255, 255, 0.7);
+
+    top: 0;
+    left: 12px;
+    font-size: 1.3em;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.16), 0 3px 6px rgba(0, 0, 0, 0.23);
+    z-index: 5;
+}
+
+/* #home-nav a {
+    color: black;
+    text-decoration: none;
+    display: block;
+
+    padding: 0 20px;
+    margin: 0;
+}
+
+#home-nav a:hover {
+    border-style: hidden solid;
+    color: lightseagreen;
+
+    border-width: 1px;
+    transition: 0.3s;
+} */
+
+#home-nav ul {
+    list-style-type: none;
+
+    margin: 0;
+    padding: 0;
+}
+
+#home-nav li {
+    display: flex;
+    float: left;
+    justify-content: center;
+    align-items: center;
+}
+
+#home-nav .icons {
+    padding: 0.7em;
+    margin: 0;
+    cursor: pointer;
+}
+
+#home-nav .icons:hover {
+    background: #7777 !important;
+}
+
 .world {
     fill: #639a67;
     cursor: pointer;
@@ -77,7 +134,6 @@ svg {
     opacity: 0.25;
     cursor: pointer;
 }
-
 
 .globe:hover {
     cursor: pointer;

@@ -148,7 +148,7 @@ function main() {
             links.push({
                 type: "LineString",
                 code: code,
-                coordinates: [taiwan_coords, target_coords],
+                coordinates: [target_coords, taiwan_coords],
             });
         }
 
@@ -259,8 +259,9 @@ function main() {
             return function (t) {
                 var point = path_node.getPointAtLength(r(t)); // Get the next point along the path
                 // console.log(path.node().getPointAtLength(length));
-                // console.log(path.node().getPointAtL           ength(r(t)));
+                // console.log(path.node().getPointAtLength(r(t)));
                 d3.select(this) // Select the circle
+                    .attr("r", (t * 2 * projection.scale()) / 150)
                     .attr("cx", point.x) // Set the cx
                     .attr("cy", point.y); // Set the cy
             };
@@ -327,9 +328,36 @@ function main() {
             })
         );
 
+        var rotate = false;
+        var rotation_timer = enableRotation();
+        rotation_timer.stop();
+        d3.select("#repeat-btn").on("click", function () {
+            if (!rotate) {
+                rotation_timer.restart(function (elapsed) {
+                    const rotate = projection.rotate();
+                    const k = sensitivity / projection.scale();
+                    projection.rotate([rotate[0] - 1 * k, rotate[1]]);
+                    path = d3.geoPath().projection(projection);
+                    svg.selectAll("path").attr("d", path);
+                    people.attr("x", function (d, i) {
+                        let path_node = myLinks.nodes()[i];
+                        let length = path_node.getTotalLength(); // Get the length of the path
+                        let point = path_node.getPointAtLength(length);
+                        d3.select(this).attr("cx", point.x).attr("cy", point.y);
+                    });
+                });
+                rotate = true;
+                d3.select(this).style("background", "#7777");
+            } else {
+                rotation_timer.stop();
+                rotate = false;
+                d3.select(this).style("background", "none");
+            }
+        });
+
         // enableRotation();
         function enableRotation() {
-            d3.timer(function (elapsed) {
+            let roatation_timer = d3.interval(function (elapsed) {
                 const rotate = projection.rotate();
                 const k = sensitivity / projection.scale();
                 projection.rotate([rotate[0] - 1 * k, rotate[1]]);
@@ -341,7 +369,9 @@ function main() {
                     let point = path_node.getPointAtLength(length);
                     d3.select(this).attr("cx", point.x).attr("cy", point.y);
                 });
-            }, 300);
+            }, 500);
+
+            return roatation_timer;
         }
 
         function drawGraticule() {
