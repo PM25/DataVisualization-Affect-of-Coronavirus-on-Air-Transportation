@@ -78,9 +78,6 @@ svg {
     cursor: pointer;
 }
 
-.link:hover {
-    opacity: 1;
-}
 
 .globe:hover {
     cursor: pointer;

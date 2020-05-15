@@ -16,7 +16,7 @@ function main() {
 
     const initialScale = projection.scale();
     const zoom = d3.zoom().scaleExtent([0.6, 10]).on("zoom", zoomed);
-    const sensitivity = 30;
+    const sensitivity = 50;
     // svg.call(
     //     d3.drag().on("drag", () => {
     //         const rotate = projection.rotate();
@@ -76,10 +76,10 @@ function main() {
             .style("position", "absolute")
             .style("z-index", "10")
             .style("visibility", "hidden")
-            .text("a simple toolti")
-            .style("background", "white")
+            .style("background", "#fffc")
             .style("padding", "1px 5px")
-            .style("border-radius", "5");
+            .style("font-size", "1.2em")
+            .style("border-radius", ".5em");
 
         // Draw Map
         world = values[0];
@@ -101,11 +101,13 @@ function main() {
             .append("path")
             .attr("class", "world")
             .attr("d", path)
-            .on("mouseover", function (d, i) {
-                console.log(flights_data_dict[d.id]);
+            .attr("id", (d) => "country" + d.id)
+            .on("mouseover", function (d) {
                 if (d.id in flights_data_dict) {
-                    tooltip.text(flights_data_dict[d.id]["國家"]);
+                    set_tooltip(d.id);
                     tooltip.style("visibility", "visible");
+                    d3.select("#link" + d.id).style("opacity", 1);
+                    d3.select(this).style("fill", "#ffb367aa");
                 }
             })
             .on("mousemove", function () {
@@ -113,8 +115,12 @@ function main() {
                     .style("top", event.pageY - 10 + "px")
                     .style("left", event.pageX + 10 + "px");
             })
-            .on("mouseout", function () {
-                return tooltip.style("visibility", "hidden");
+            .on("mouseout", function (d) {
+                tooltip.style("visibility", "hidden");
+                if (d.id in flights_data_dict) {
+                    d3.select("#link" + d.id).style("opacity", 0.25);
+                    d3.select(this).style("fill", "#639a67");
+                }
             });
         // .on("mouseover", (d, i) => {
         //     console.log(flights_data_dict[d.id]);
@@ -132,8 +138,8 @@ function main() {
         flights_data = values[1];
 
         var links = [];
-        for (let i = 0; i < 10; ++i) {
-            let country = flights_data[i]["國家"];
+        for (let i = 0; i < 14; ++i) {
+            let code = flights_data[i]["代碼"];
             let target_coords = [
                 parseFloat(flights_data[i]["緯度"]),
                 parseFloat(flights_data[i]["經度"]),
@@ -141,39 +147,47 @@ function main() {
 
             links.push({
                 type: "LineString",
-                target_country: country,
+                code: code,
                 coordinates: [taiwan_coords, target_coords],
             });
         }
-
-        var line = d3.line().curve(d3.curveBasis);
-        // var path = svg
-        //     .append("path")
-        //     .attr("d", line(lineData))
-        //     .style("stroke", "black")
-        //     .style("fill", "none");
-
-        // let myLinks = svg
-        //     .selectAll("_path")
-        //     .data(links)
-        //     .enter()
-        //     .append("path")
-        //     .attr("d", (d) => path(d))
-        //     .attr("class", "link")
-        //     .style("fill", "none")
-        //     .style("stroke-width", initialScale / 200)
-        //     .call(transition);
 
         let myLinks_base = svg.selectAll("_path").data(links).enter();
         let myLinks = myLinks_base
             .append("path")
             .attr("d", (d) => path(d))
             .attr("class", "link")
+            .attr("id", (d) => "link" + d.code)
             .style("fill", "none")
-            .style("stroke-width", initialScale / 200)
+            .style("stroke-width", initialScale / 150)
+            .on("mouseover", function (d) {
+                // tooltip.text(flights_data_dict[d.code]["國家"]);
+                set_tooltip(d.code);
+                tooltip.style("visibility", "visible");
+                d3.select(this).style("opacity", 1);
+                d3.select("#country" + d.code).style("fill", "#ffb367aa");
+            })
+            .on("mousemove", function () {
+                return tooltip
+                    .style("top", event.pageY - 10 + "px")
+                    .style("left", event.pageX + 10 + "px");
+            })
+            .on("mouseout", function (d) {
+                tooltip.style("visibility", "hidden");
+                d3.select(this).style("opacity", 0.25);
+                d3.select("#country" + d.code).style("fill", "#639a67");
+            })
             .call(transition);
 
-        console.log(myLinks);
+        function set_tooltip(id) {
+            // console.log(flights_data_dict[id]);
+            tooltip.text(
+                flights_data_dict[id]["國家"]
+                // flights_data_dict[id]["12月"]
+            );
+        }
+
+        // console.log(myLinks);
         // let people = svg
         //     .selectAll("_circle")
         //     .data(links)
@@ -186,10 +200,10 @@ function main() {
 
         let people = myLinks_base
             .append("circle")
-            .attr("cx", 50)
-            .attr("cy", 50)
+            .attr("id", (d) => "point" + d.code)
             .attr("r", initialScale / 150)
             .style("fill", "orange")
+            .style("opacity", 0.9)
             .call(foo);
 
         // svg.append("circle").attr("r", 2).attr("cx", ).attr("cy", 50);
@@ -197,12 +211,47 @@ function main() {
         function foo(paths) {
             paths
                 .transition()
+                .delay(1500)
                 .duration(2000)
                 .ease(d3.easePoly)
                 .tween("pathTween", function (d, i) {
                     return pathTween(myLinks.nodes()[i]);
-                });
+                })
+                .on("end", foo2);
         }
+
+        function foo2() {
+            people
+                .transition()
+                .delay(250)
+                .duration(2000)
+                .ease(d3.easePoly)
+                .tween("pathTween", function (d, i) {
+                    return pathTween(myLinks.nodes()[i]);
+                })
+                .on("end", foo2);
+        }
+
+        // function foo(paths) {
+        //     paths
+        //         .transition()
+        //         .delay(500)
+        //         .duration(2000)
+        //         .ease(d3.easePoly)
+        //         .tween("pathTween", function (d, i) {
+        //             return pathTween(myLinks.nodes()[i]);
+        //         })
+        //         .on("end", function (d, i) {
+        //             // d3.select(this)
+        //             //     .transition()
+        //             //     .delay(500)
+        //             //     .duration(2000)
+        //             //     .ease(d3.easePoly)
+        //             //     .tween("pathTween", function () {
+        //             //         return pathTween(myLinks.nodes()[i]);
+        //             //     });
+        //         });
+        // }
 
         function pathTween(path_node) {
             let length = path_node.getTotalLength(); // Get the length of the path
@@ -263,7 +312,7 @@ function main() {
                     path = d3.geoPath().projection(projection);
                     svg.selectAll("path").attr("d", path);
                     globe.attr("r", projection.scale());
-                    myLinks.style("stroke-width", projection.scale() / 200);
+                    myLinks.style("stroke-width", projection.scale() / 150);
                     people.attr("r", projection.scale() / 150);
 
                     people.attr("x", function (d, i) {
@@ -286,6 +335,12 @@ function main() {
                 projection.rotate([rotate[0] - 1 * k, rotate[1]]);
                 path = d3.geoPath().projection(projection);
                 svg.selectAll("path").attr("d", path);
+                people.attr("x", function (d, i) {
+                    let path_node = myLinks.nodes()[i];
+                    let length = path_node.getTotalLength(); // Get the length of the path
+                    let point = path_node.getPointAtLength(length);
+                    d3.select(this).attr("cx", point.x).attr("cy", point.y);
+                });
             }, 300);
         }
 
