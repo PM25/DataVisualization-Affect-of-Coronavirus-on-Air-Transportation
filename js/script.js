@@ -93,7 +93,10 @@ function main() {
             .attr("cx", width / 2)
             .attr("cy", height / 2)
             .attr("r", initialScale)
-            .attr("class", "globe");
+            .attr("class", "globe")
+            .on("click", function () {
+                d3.select("#infobox").style("visibility", "hidden");
+            });
 
         svg.selectAll("path")
             .data(world.features)
@@ -121,10 +124,30 @@ function main() {
                     d3.select("#link" + d.id).style("opacity", 0.25);
                     d3.select(this).style("fill", "#639a67");
                 }
+            })
+            .on("click", function (d) {
+                if (d.id in flights_data_dict) {
+                    d3.select("#infobox").style("visibility", "visible");
+                    d3.select("#infobox .title")
+                        .text(flights_data_dict[d.id]["國家"])
+                        .style("font-size", "1.5em");
+                    d3.select("#infobox .content").html(
+                        "2019年 12月: " +
+                            flights_data_dict[d.id]["12月"] +
+                            "<br>" +
+                            "2020年 1月: " +
+                            flights_data_dict[d.id]["1月"] +
+                            "<br>" +
+                            "2020年 2月: " +
+                            flights_data_dict[d.id]["2月"] +
+                            "<br>" +
+                            "2020年 3月: " +
+                            flights_data_dict[d.id]["3月"]
+                    );
+                } else {
+                    d3.select("#infobox").style("visibility", "hidden");
+                }
             });
-        // .on("mouseover", (d, i) => {
-        //     console.log(flights_data_dict[d.id]);
-        // });
 
         // Draw Boundary
         svg.append("path")
@@ -138,7 +161,8 @@ function main() {
         flights_data = values[1];
 
         var links = [];
-        for (let i = 0; i < 14; ++i) {
+        var out_links = [];
+        for (let i = 0; i < 10; ++i) {
             let code = flights_data[i]["代碼"];
             let target_coords = [
                 parseFloat(flights_data[i]["緯度"]),
@@ -150,69 +174,87 @@ function main() {
                 code: code,
                 coordinates: [target_coords, taiwan_coords],
             });
+            out_links.push({
+                type: "LineString",
+                code: code,
+                coordinates: [taiwan_coords, target_coords],
+            });
         }
 
-        let myLinks_base = svg.selectAll("_path").data(links).enter();
-        let myLinks = myLinks_base
-            .append("path")
-            .attr("d", (d) => path(d))
-            .attr("class", "link")
-            .attr("id", (d) => "link" + d.code)
-            .style("fill", "none")
-            .style("stroke-width", initialScale / 150)
-            .on("mouseover", function (d) {
-                // tooltip.text(flights_data_dict[d.code]["國家"]);
-                set_tooltip(d.code);
-                tooltip.style("visibility", "visible");
-                d3.select(this).style("opacity", 1);
-                d3.select("#country" + d.code).style("fill", "#ffb367aa");
-            })
-            .on("mousemove", function () {
-                return tooltip
-                    .style("top", event.pageY - 10 + "px")
-                    .style("left", event.pageX + 10 + "px");
-            })
-            .on("mouseout", function (d) {
-                tooltip.style("visibility", "hidden");
-                d3.select(this).style("opacity", 0.25);
-                d3.select("#country" + d.code).style("fill", "#639a67");
-            })
-            .call(transition);
+        d3.select("#infobox")
+            .style("visibility", "hidden")
+            .style("background", "#fffa");
+
+        draw_links(links);
+        var myLinks, people;
+        function draw_links(links) {
+            let myLinks_base = svg.selectAll("_path").data(links).enter();
+            myLinks = myLinks_base
+                .append("path")
+                .attr("d", (d) => path(d))
+                .attr("class", "link")
+                .attr("id", (d) => "link" + d.code)
+                .style("fill", "none")
+                .style("stroke-width", initialScale / 150)
+                .on("mouseover", function (d) {
+                    // tooltip.text(flights_data_dict[d.code]["國家"]);
+                    set_tooltip(d.code);
+                    tooltip.style("visibility", "visible");
+                    d3.select(this).style("opacity", 1);
+                    d3.select("#country" + d.code).style("fill", "#ffb367aa");
+                })
+                .on("mousemove", function () {
+                    return tooltip
+                        .style("top", event.pageY - 10 + "px")
+                        .style("left", event.pageX + 10 + "px");
+                })
+                .on("mouseout", function (d) {
+                    tooltip.style("visibility", "hidden");
+                    d3.select(this).style("opacity", 0.25);
+                    d3.select("#country" + d.code).style("fill", "#639a67");
+                })
+                .on("click", function (d) {
+                    d3.select("#infobox").style("visibility", "visible");
+                    d3.select("#infobox .title")
+                        .text(flights_data_dict[d.code]["國家"])
+                        .style("font-size", "1.5em");
+                    d3.select("#infobox .content").html(
+                        "2019年 12月: " +
+                            flights_data_dict[d.code]["12月"] +
+                            "<br>" +
+                            "2020年 1月: " +
+                            flights_data_dict[d.code]["1月"] +
+                            "<br>" +
+                            "2020年 2月: " +
+                            flights_data_dict[d.code]["2月"] +
+                            "<br>" +
+                            "2020年 3月: " +
+                            flights_data_dict[d.code]["3月"]
+                    );
+                })
+                .call(transition);
+
+            people = myLinks_base
+                .append("circle")
+                .attr("id", (d) => "point" + d.code)
+                .attr("r", initialScale / 150)
+                .style("fill", "orange")
+                .style("opacity", 0.9)
+                .call(foo);
+        }
 
         function set_tooltip(id) {
-            // console.log(flights_data_dict[id]);
             tooltip.text(
                 flights_data_dict[id]["國家"]
                 // flights_data_dict[id]["12月"]
             );
         }
 
-        // console.log(myLinks);
-        // let people = svg
-        //     .selectAll("_circle")
-        //     .data(links)
-        //     .enter()
-        //     .append("circle")
-        //     // .attr("cx", 25) //Starting x
-        //     // .attr("cy", 25) //Starting y
-        //     .attr("r", 5)
-        //     .call(foo);
-
-        let people = myLinks_base
-            .append("circle")
-            .attr("id", (d) => "point" + d.code)
-            .attr("r", initialScale / 150)
-            .style("fill", "orange")
-            .style("opacity", 0.9)
-            .call(foo);
-
-        // svg.append("circle").attr("r", 2).attr("cx", ).attr("cy", 50);
-
         function foo(paths) {
             paths
                 .transition()
                 .delay(1500)
-                .duration(2000)
+                .duration(6000)
                 .ease(d3.easePoly)
                 .tween("pathTween", function (d, i) {
                     return pathTween(myLinks.nodes()[i]);
@@ -224,34 +266,13 @@ function main() {
             people
                 .transition()
                 .delay(250)
-                .duration(2000)
+                .duration(6000)
                 .ease(d3.easePoly)
                 .tween("pathTween", function (d, i) {
                     return pathTween(myLinks.nodes()[i]);
                 })
                 .on("end", foo2);
         }
-
-        // function foo(paths) {
-        //     paths
-        //         .transition()
-        //         .delay(500)
-        //         .duration(2000)
-        //         .ease(d3.easePoly)
-        //         .tween("pathTween", function (d, i) {
-        //             return pathTween(myLinks.nodes()[i]);
-        //         })
-        //         .on("end", function (d, i) {
-        //             // d3.select(this)
-        //             //     .transition()
-        //             //     .delay(500)
-        //             //     .duration(2000)
-        //             //     .ease(d3.easePoly)
-        //             //     .tween("pathTween", function () {
-        //             //         return pathTween(myLinks.nodes()[i]);
-        //             //     });
-        //         });
-        // }
 
         function pathTween(path_node) {
             let length = path_node.getTotalLength(); // Get the length of the path
@@ -261,7 +282,7 @@ function main() {
                 // console.log(path.node().getPointAtLength(length));
                 // console.log(path.node().getPointAtLength(r(t)));
                 d3.select(this) // Select the circle
-                    .attr("r", (t * 2 * projection.scale()) / 150)
+                    .attr("r", (1 + t * 2 * projection.scale()) / 150)
                     .attr("cx", point.x) // Set the cx
                     .attr("cy", point.y); // Set the cy
             };
@@ -269,7 +290,7 @@ function main() {
 
         function transition(path) {
             path.transition()
-                .duration(2000)
+                .duration(3000)
                 .attrTween("stroke-dasharray", tweenDash)
                 .on("end", function (d, i) {
                     d3.select(this).style("stroke-dasharray", "none");
@@ -322,8 +343,6 @@ function main() {
                         let point = path_node.getPointAtLength(length);
                         d3.select(this).attr("cx", point.x).attr("cy", point.y);
                     });
-
-                    // people.attr("r", projection.scale() / 50);
                 }
             })
         );
@@ -352,6 +371,23 @@ function main() {
                 rotation_timer.stop();
                 rotate = false;
                 d3.select(this).style("background", "none");
+            }
+        });
+
+        var departure = false;
+        d3.select("#departure-btn").on("click", function () {
+            if (departure) {
+                people.remove();
+                myLinks.remove();
+                draw_links(links);
+                departure = false;
+                d3.select(this).style("background", "none");
+            } else {
+                people.remove();
+                myLinks.remove();
+                draw_links(out_links);
+                departure = true;
+                d3.select(this).style("background", "#7777");
             }
         });
 

@@ -22,7 +22,7 @@ svg {
     height: 100vh;
 }
 
-.info {
+#infobox {
     position: fixed;
     display: flex;
     flex-direction: column;
