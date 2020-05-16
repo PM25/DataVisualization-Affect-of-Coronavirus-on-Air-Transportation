@@ -5,46 +5,22 @@ function main() {
         height = window.innerHeight;
 
     var svg = d3.select("svg");
+    const translation = [width / 2, height / 2];
 
     var projection = d3
         .geoOrthographic()
         .scale(700) // 放大倍率
         .center([0, 0])
         .rotate([-121.5654, -25.033])
-        .translate([width / 2, height / 2]); // 置中
+        .translate(translation); // 置中
     var path = d3.geoPath().projection(projection);
 
-    const initialScale = projection.scale();
-    const zoom = d3.zoom().scaleExtent([0.6, 10]).on("zoom", zoomed);
-    const sensitivity = 50;
-    // svg.call(
-    //     d3.drag().on("drag", () => {
-    //         const rotate = projection.rotate();
-    //         const k = sensitivity / projection.scale();
-    //         projection.rotate([
-    //             rotate[0] + d3.event.dx * k,
-    //             rotate[1] - d3.event.dy * k,
-    //         ]);
-    //         path = d3.geoPath().projection(projection);
-    //         svg.selectAll("path").attr("d", path);
-    //     })
-    // ).call(
-    //     d3.zoom().on("zoom", () => {
-    //         if (d3.event.transform.k > 0.3) {
-    //             projection.scale(initialScale * d3.event.transform.k);
-    //             path = d3.geoPath().projection(projection);
-    //             svg.selectAll("path").attr("d", path);
-    //             globe.attr("r", projection.scale());
-    //         } else {
-    //             d3.event.transform.k = 0.3;
-    //         }
-    //     })
-    // );
-
-    function zoomed() {
-        svg.selectAll("path") // To prevent stroke width from scaling
-            .attr("transform", d3.event.transform);
-    }
+    const InitialScale = projection.scale();
+    const Sensitivity = 50;
+    const taiwan_coords = [121.5654, 25.033];
+    const countries_color = "#639a67";
+    const zoom_range = [0.3, 15];
+    const links_scale = 0.01;
 
     var files = [
         "https://unpkg.com/world-atlas@1/world/110m.json",
@@ -53,15 +29,15 @@ function main() {
 
     var promises = [];
     files.forEach((url) => {
-        let splited_url = url.split(".");
-        if (splited_url[splited_url.length - 1] == "json") {
+        let splitted_url = url.split(".");
+        if (splitted_url[splitted_url.length - 1] == "json") {
             promises.push(d3.json(url));
-        } else if (splited_url[splited_url.length - 1] == "csv") {
+        } else if (splitted_url[splitted_url.length - 1] == "csv") {
             promises.push(d3.csv(url));
         }
     });
 
-    taiwan_coords = [121.5654, 25.033];
+    // Main Function
     Promise.all(promises).then(function (values) {
         flights_data = values[1];
         flights_data_dict = {};
@@ -70,106 +46,206 @@ function main() {
             flights_data_dict[code] = flights_data[i];
         }
 
-        var tooltip = d3
-            .select("body")
-            .append("div")
-            .style("position", "absolute")
-            .style("z-index", "10")
-            .style("visibility", "hidden")
-            .style("background", "#fffc")
-            .style("padding", "1px 5px")
-            .style("font-size", "1.2em")
-            .style("border-radius", ".5em");
-
         // Draw Map
         world = values[0];
         world = topojson.feature(world, world.objects.countries);
 
-        let globe = svg
+        var tooltip = create_tooltip();
+        var infobox = create_infobox();
+        var globe_bg = draw_globe_bg(infobox);
+        var countries = draw_countries(
+            world,
+            tooltip,
+            infobox,
+            flights_data_dict
+        );
+        var boundries = draw_boundries(world);
+        var graticule = draw_graticule();
+        var links_data = create_links(flights_data);
+        var in_links = links_data[0],
+            out_links = links_data[1];
+        var links_components = draw_links(in_links, infobox, tooltip);
+        var links = links_components[0],
+            points = links_components[1];
+
+        enable_zoom_drag(globe_bg, links, points);
+        var rotation_btn = new Rotation_Btn();
+        var departure_btn = new Departure_Btn(
+            links_components,
+            in_links,
+            out_links
+        );
+    });
+
+    function create_tooltip() {
+        let tooltip = d3
+            .select("body")
+            .append("div")
+            .style("position", "absolute")
+            .style("z-index", "5")
+            .style("visibility", "hidden")
+            .style("background", "#fffc")
+            .style("padding", ".1em .5em")
+            .style("font-size", "1.2em")
+            .style("border-radius", ".3em");
+
+        return tooltip;
+    }
+
+    function create_infobox() {
+        let infobox = d3
+            .select("body")
+            .append("div")
+            .style("position", "fixed")
+            .style("right", 0)
+            .style("bottom", 0)
+            .style("width", "35vw")
+            .style("height", "60vh")
+            .style("background-color", "#ddd")
+            .style("border-radius", ".5em")
+            .style("margin", "1em")
+            .style("margin-top", 0)
+            .style("padding", "1em")
+            .style("box-sizing", "border-box")
+            .style("visibility", "hidden")
+            .style("background", "#fffa");
+
+        infobox
+            .append("div")
+            .attr("class", "title")
+            .style("font-size", "1.5em");
+
+        infobox.append("div").attr("class", "content");
+
+        return infobox;
+    }
+
+    function draw_globe_bg(infobox) {
+        let globe_bg = svg
             .append("circle")
             .attr("fill", "#588da8")
             .attr("stroke", "#000")
             .attr("stroke-width", "0.2")
-            .attr("cx", width / 2)
-            .attr("cy", height / 2)
-            .attr("r", initialScale)
-            .attr("class", "globe")
+            .attr("cx", translation[0])
+            .attr("cy", translation[1])
+            .attr("r", InitialScale)
+            .attr("class", "globe_bg")
+            .attr("cursor", "pointer")
             .on("click", function () {
-                d3.select("#infobox").style("visibility", "hidden");
+                infobox.style("visibility", "hidden");
             });
 
-        svg.selectAll("path")
+        return globe_bg;
+    }
+
+    function draw_countries(world, tooltip, infobox, flights_data) {
+        let countries = svg
+            .selectAll("_path")
             .data(world.features)
             .enter()
             .append("path")
-            .attr("class", "world")
             .attr("d", path)
             .attr("id", (d) => "country" + d.id)
+            .style("fill", countries_color)
+            .style("cursor", "pointer")
             .on("mouseover", function (d) {
-                if (d.id in flights_data_dict) {
-                    set_tooltip(d.id);
-                    tooltip.style("visibility", "visible");
-                    d3.select("#link" + d.id).style("opacity", 1);
-                    d3.select(this).style("fill", "#ffb367aa");
+                if (d.id in flights_data) {
+                    set_tooltip(flights_data[d.id], tooltip);
+                    highlight(d.id, true);
+                } else {
+                    d3.select(this).style("fill", "#3339");
                 }
             })
             .on("mousemove", function () {
-                return tooltip
+                tooltip
                     .style("top", event.pageY - 10 + "px")
                     .style("left", event.pageX + 10 + "px");
             })
             .on("mouseout", function (d) {
                 tooltip.style("visibility", "hidden");
-                if (d.id in flights_data_dict) {
-                    d3.select("#link" + d.id).style("opacity", 0.25);
-                    d3.select(this).style("fill", "#639a67");
-                }
+                highlight(d.id, false);
             })
             .on("click", function (d) {
-                if (d.id in flights_data_dict) {
-                    d3.select("#infobox").style("visibility", "visible");
-                    d3.select("#infobox .title")
-                        .text(flights_data_dict[d.id]["國家"])
-                        .style("font-size", "1.5em");
-                    d3.select("#infobox .content").html(
-                        "2019年 12月: " +
-                            flights_data_dict[d.id]["12月"] +
-                            "<br>" +
-                            "2020年 1月: " +
-                            flights_data_dict[d.id]["1月"] +
-                            "<br>" +
-                            "2020年 2月: " +
-                            flights_data_dict[d.id]["2月"] +
-                            "<br>" +
-                            "2020年 3月: " +
-                            flights_data_dict[d.id]["3月"]
-                    );
+                if (d.id in flights_data) {
+                    show_info(flights_data[d.id], infobox);
                 } else {
-                    d3.select("#infobox").style("visibility", "hidden");
+                    infobox.style("visibility", "hidden");
                 }
             });
 
-        // Draw Boundary
-        svg.append("path")
+        return countries;
+    }
+
+    function highlight(code, on, country_color = "#ffb367aa") {
+        if (on) {
+            d3.select("#link" + code).style("opacity", 1);
+            d3.select("#country" + code).style("fill", country_color);
+        } else {
+            d3.select("#link" + code).style("opacity", 0.25);
+            d3.select("#country" + code).style("fill", countries_color);
+        }
+    }
+
+    function show_info(flight_data, infobox) {
+        infobox.style("visibility", "visible");
+        infobox.select(".title").text(flight_data["國家"]);
+        infobox
+            .select(".content")
+            .html(
+                "2019年 12月: " +
+                    flight_data["12月"] +
+                    "<br>" +
+                    "2020年 1月: " +
+                    flight_data["1月"] +
+                    "<br>" +
+                    "2020年 2月: " +
+                    flight_data["2月"] +
+                    "<br>" +
+                    "2020年 3月: " +
+                    flight_data["3月"]
+            );
+    }
+
+    function set_tooltip(flight_data, tooltip) {
+        tooltip.text(flight_data["國家"]).style("visibility", "visible");
+    }
+
+    function draw_boundries(world) {
+        let boundaries = svg
+            .append("path")
             .datum(world)
             .attr("d", path)
-            .attr("class", "boundary");
+            .style("fill", "none")
+            .style("stroke", "#333")
+            .style("stroke-width", "0.01em");
 
-        drawGraticule();
+        return boundaries;
+    }
 
-        // Top 10 flight export countries
-        flights_data = values[1];
+    function draw_graticule(step = [10, 10]) {
+        let graticule = svg
+            .append("path")
+            .datum(d3.geoGraticule().step(step))
+            .attr("d", path)
+            .style("fill", "none")
+            .style("stroke", "#cccc")
+            .style("stroke-width", 0.2);
 
-        var links = [];
-        var out_links = [];
-        for (let i = 0; i < 10; ++i) {
+        return graticule;
+    }
+
+    function create_links(flights_data, count = 10) {
+        let in_links = [],
+            out_links = [];
+
+        for (let i = 0; i < count; ++i) {
             let code = flights_data[i]["代碼"];
             let target_coords = [
                 parseFloat(flights_data[i]["緯度"]),
                 parseFloat(flights_data[i]["經度"]),
             ];
 
-            links.push({
+            in_links.push({
                 type: "LineString",
                 code: code,
                 coordinates: [target_coords, taiwan_coords],
@@ -181,245 +257,190 @@ function main() {
             });
         }
 
-        d3.select("#infobox")
-            .style("visibility", "hidden")
-            .style("background", "#fffa");
+        return [in_links, out_links];
+    }
 
-        draw_links(links);
-        var myLinks, people;
-        function draw_links(links) {
-            let myLinks_base = svg.selectAll("_path").data(links).enter();
-            myLinks = myLinks_base
-                .append("path")
-                .attr("d", (d) => path(d))
-                .attr("class", "link")
-                .attr("id", (d) => "link" + d.code)
-                .style("fill", "none")
-                .style("stroke-width", initialScale / 150)
-                .on("mouseover", function (d) {
-                    // tooltip.text(flights_data_dict[d.code]["國家"]);
-                    set_tooltip(d.code);
-                    tooltip.style("visibility", "visible");
-                    d3.select(this).style("opacity", 1);
-                    d3.select("#country" + d.code).style("fill", "#ffb367aa");
-                })
-                .on("mousemove", function () {
-                    return tooltip
-                        .style("top", event.pageY - 10 + "px")
-                        .style("left", event.pageX + 10 + "px");
-                })
-                .on("mouseout", function (d) {
-                    tooltip.style("visibility", "hidden");
-                    d3.select(this).style("opacity", 0.25);
-                    d3.select("#country" + d.code).style("fill", "#639a67");
-                })
-                .on("click", function (d) {
-                    d3.select("#infobox").style("visibility", "visible");
-                    d3.select("#infobox .title")
-                        .text(flights_data_dict[d.code]["國家"])
-                        .style("font-size", "1.5em");
-                    d3.select("#infobox .content").html(
-                        "2019年 12月: " +
-                            flights_data_dict[d.code]["12月"] +
-                            "<br>" +
-                            "2020年 1月: " +
-                            flights_data_dict[d.code]["1月"] +
-                            "<br>" +
-                            "2020年 2月: " +
-                            flights_data_dict[d.code]["2月"] +
-                            "<br>" +
-                            "2020年 3月: " +
-                            flights_data_dict[d.code]["3月"]
-                    );
-                })
-                .call(transition);
+    function draw_links(
+        links_data,
+        infobox,
+        tooltip,
+        color = "#ffb367",
+        duration = 3000
+    ) {
+        let links_base = svg.selectAll("_path").data(links_data).enter();
 
-            people = myLinks_base
-                .append("circle")
-                .attr("id", (d) => "point" + d.code)
-                .attr("r", initialScale / 150)
-                .style("fill", "orange")
-                .style("opacity", 0.9)
-                .call(foo);
+        // Draw Links
+        let links = links_base
+            .append("path")
+            .attr("d", (d) => path(d))
+            .attr("class", "link")
+            .attr("id", (d) => "link" + d.code)
+            .style("fill", "none")
+            .style("stroke-width", InitialScale / 150)
+            .style("stroke-linecap", "round")
+            .style("opacity", 0.25)
+            .style("cursor", "pointer")
+            .style("stroke", color)
+            .on("mouseover", function (d) {
+                set_tooltip(flights_data_dict[d.code], tooltip);
+                highlight(d.code, true);
+            })
+            .on("mousemove", function () {
+                tooltip
+                    .style("top", event.pageY - 10 + "px")
+                    .style("left", event.pageX + 10 + "px");
+            })
+            .on("mouseout", function (d) {
+                tooltip.style("visibility", "hidden");
+                highlight(d.code, false);
+            })
+            .on("click", function (d) {
+                show_info(flights_data_dict[d.code], infobox);
+            })
+            .call(links_transition);
+
+        // Draw Points
+        var points = links_base
+            .append("circle")
+            .attr("id", (d) => "point" + d.code)
+            .attr("r", InitialScale / 150)
+            .style("fill", "orange")
+            .style("opacity", 0.9);
+        points_transition();
+
+        function links_transition(path) {
+            path.transition()
+                .duration(duration)
+                .attrTween("stroke-dasharray", tweenDash)
+                .on("end", function () {
+                    d3.select(this).style("stroke-dasharray", "none");
+                });
+
+            function tweenDash() {
+                let l = this.getTotalLength(),
+                    i = d3.interpolateString("0," + l, l + "," + l);
+                return function (t) {
+                    return i(t);
+                };
+            }
         }
 
-        function set_tooltip(id) {
-            tooltip.text(
-                flights_data_dict[id]["國家"]
-                // flights_data_dict[id]["12月"]
-            );
-        }
-
-        function foo(paths) {
-            paths
+        function points_transition() {
+            points
                 .transition()
                 .delay(1500)
                 .duration(6000)
                 .ease(d3.easePoly)
                 .tween("pathTween", function (d, i) {
-                    return pathTween(myLinks.nodes()[i]);
+                    return pathTween(links.nodes()[i]);
                 })
-                .on("end", foo2);
+                .on("end", points_transition);
+
+            function pathTween(path_node) {
+                let length = path_node.getTotalLength();
+                let r = d3.interpolate(0, length);
+                return function (t) {
+                    var point = path_node.getPointAtLength(r(t));
+
+                    if (t < 0.25) t = 0.25;
+                    else if (t < 0.5) t = 0.5;
+                    else if (t < 0.75) t = 0.75;
+                    else t = 1;
+                    d3.select(this)
+                        .attr("r", t * projection.scale() * links_scale)
+                        .attr("cx", point.x)
+                        .attr("cy", point.y);
+                };
+            }
         }
 
-        function foo2() {
-            people
-                .transition()
-                .delay(250)
-                .duration(6000)
-                .ease(d3.easePoly)
-                .tween("pathTween", function (d, i) {
-                    return pathTween(myLinks.nodes()[i]);
-                })
-                .on("end", foo2);
-        }
+        return [links, points];
+    }
 
-        function pathTween(path_node) {
-            let length = path_node.getTotalLength(); // Get the length of the path
-            let r = d3.interpolate(0, length); //Set up interpolation from 0 to the path length
-            return function (t) {
-                var point = path_node.getPointAtLength(r(t)); // Get the next point along the path
-                // console.log(path.node().getPointAtLength(length));
-                // console.log(path.node().getPointAtLength(r(t)));
-                d3.select(this) // Select the circle
-                    .attr("r", (1 + t * 2 * projection.scale()) / 150)
-                    .attr("cx", point.x) // Set the cx
-                    .attr("cy", point.y); // Set the cy
-            };
-        }
-
-        function transition(path) {
-            path.transition()
-                .duration(3000)
-                .attrTween("stroke-dasharray", tweenDash)
-                .on("end", function (d, i) {
-                    d3.select(this).style("stroke-dasharray", "none");
-                });
-        }
-
-        function tweenDash() {
-            var l = this.getTotalLength(),
-                i = d3.interpolateString("0," + l, l + "," + l);
-            return function (t) {
-                return i(t);
-            };
-        }
-
+    function enable_zoom_drag(globe_bg, links, points) {
         svg.call(
             d3.drag().on("drag", () => {
                 const rotate = projection.rotate();
-                const k = sensitivity / projection.scale();
+                const k = Sensitivity / projection.scale();
                 projection.rotate([
                     rotate[0] + d3.event.dx * k,
                     rotate[1] - d3.event.dy * k,
                 ]);
+                // Update all path
                 path = d3.geoPath().projection(projection);
                 svg.selectAll("path").attr("d", path);
-
-                people.attr("x", function (d, i) {
-                    let path_node = myLinks.nodes()[i];
-                    let length = path_node.getTotalLength(); // Get the length of the path
-                    let point = path_node.getPointAtLength(length);
-                    d3.select(this).attr("cx", point.x).attr("cy", point.y);
-                });
             })
         ).call(
             d3.zoom().on("zoom", () => {
-                if (d3.event.transform.k < 0.3) {
-                    d3.event.transform.k = 0.3;
-                } else if (d3.event.transform.k > 15) {
-                    d3.event.transform.k = 15;
+                if (d3.event.transform.k < zoom_range[0]) {
+                    d3.event.transform.k = zoom_range[0];
+                } else if (d3.event.transform.k > zoom_range[1]) {
+                    d3.event.transform.k = zoom_range[1];
                 } else {
-                    projection.scale(initialScale * d3.event.transform.k);
+                    projection.scale(InitialScale * d3.event.transform.k);
                     path = d3.geoPath().projection(projection);
                     svg.selectAll("path").attr("d", path);
-                    globe.attr("r", projection.scale());
-                    myLinks.style("stroke-width", projection.scale() / 150);
-                    people.attr("r", projection.scale() / 150);
-
-                    people.attr("x", function (d, i) {
-                        let path_node = myLinks.nodes()[i];
-                        let length = path_node.getTotalLength(); // Get the length of the path
-                        let point = path_node.getPointAtLength(length);
-                        d3.select(this).attr("cx", point.x).attr("cy", point.y);
-                    });
+                    globe_bg.attr("r", projection.scale());
+                    links.style(
+                        "stroke-width",
+                        projection.scale() * links_scale
+                    );
+                    points.attr("r", projection.scale() * links_scale);
                 }
             })
         );
+    }
 
-        var rotate = false;
-        var rotation_timer = enableRotation();
+    function Rotation_Btn() {
+        this.enable_rotation = false;
+
+        let rotation_timer = d3.interval(rotate, 50);
         rotation_timer.stop();
-        d3.select("#repeat-btn").on("click", function () {
-            if (!rotate) {
-                rotation_timer.restart(function (elapsed) {
-                    const rotate = projection.rotate();
-                    const k = sensitivity / projection.scale();
-                    projection.rotate([rotate[0] - 1 * k, rotate[1]]);
-                    path = d3.geoPath().projection(projection);
-                    svg.selectAll("path").attr("d", path);
-                    people.attr("x", function (d, i) {
-                        let path_node = myLinks.nodes()[i];
-                        let length = path_node.getTotalLength(); // Get the length of the path
-                        let point = path_node.getPointAtLength(length);
-                        d3.select(this).attr("cx", point.x).attr("cy", point.y);
-                    });
-                });
-                rotate = true;
-                d3.select(this).style("background", "#7777");
-            } else {
+
+        let rotation_btn = d3.select("#rotation-btn").on("click", function () {
+            if (this.enable_rotate) {
+                this.enable_rotate = false;
                 rotation_timer.stop();
-                rotate = false;
-                d3.select(this).style("background", "none");
-            }
-        });
-
-        var departure = false;
-        d3.select("#departure-btn").on("click", function () {
-            if (departure) {
-                people.remove();
-                myLinks.remove();
-                draw_links(links);
-                departure = false;
                 d3.select(this).style("background", "none");
             } else {
-                people.remove();
-                myLinks.remove();
-                draw_links(out_links);
-                departure = true;
+                this.enable_rotate = true;
+                rotation_timer.restart(rotate);
                 d3.select(this).style("background", "#7777");
             }
         });
 
-        // enableRotation();
-        function enableRotation() {
-            let roatation_timer = d3.interval(function (elapsed) {
-                const rotate = projection.rotate();
-                const k = sensitivity / projection.scale();
-                projection.rotate([rotate[0] - 1 * k, rotate[1]]);
-                path = d3.geoPath().projection(projection);
-                svg.selectAll("path").attr("d", path);
-                people.attr("x", function (d, i) {
-                    let path_node = myLinks.nodes()[i];
-                    let length = path_node.getTotalLength(); // Get the length of the path
-                    let point = path_node.getPointAtLength(length);
-                    d3.select(this).attr("cx", point.x).attr("cy", point.y);
-                });
-            }, 500);
-
-            return roatation_timer;
+        function rotate(elapsed) {
+            const rotate = projection.rotate();
+            const k = Sensitivity / projection.scale();
+            projection.rotate([rotate[0] - k, rotate[1]]);
+            path = d3.geoPath().projection(projection);
+            svg.selectAll("path").attr("d", path);
         }
 
-        function drawGraticule() {
-            const graticule = d3.geoGraticule().step([10, 10]);
+        return rotation_btn;
+    }
 
-            svg.append("path")
-                .datum(graticule)
-                .attr("class", "graticule")
-                .attr("d", path)
-                .style("fill", "none")
-                .style("stroke", "#cccc")
-                .style("stroke-width", 0.2);
+    function Departure_Btn(links_components, in_links, out_links) {
+        this.departure = false;
+
+        d3.select("#departure-btn").on("click", function () {
+            if (this.departure) {
+                this.departure = false;
+                clear_links();
+                links_components = draw_links(in_links);
+                d3.select(this).style("background", "none");
+            } else {
+                this.departure = true;
+                clear_links();
+                links_components = draw_links(out_links);
+                d3.select(this).style("background", "#7777");
+            }
+        });
+
+        function clear_links() {
+            for (let i = 0; i < links_components.length; ++i) {
+                links_components[i].remove();
+            }
         }
-    });
+    }
 }
