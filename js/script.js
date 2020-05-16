@@ -73,7 +73,9 @@ function main() {
         var departure_btn = new Departure_Btn(
             links_components,
             in_links,
-            out_links
+            out_links,
+            infobox,
+            tooltip
         );
     });
 
@@ -420,26 +422,40 @@ function main() {
         return rotation_btn;
     }
 
-    function Departure_Btn(links_components, in_links, out_links) {
+    function Departure_Btn(
+        links_components,
+        in_links,
+        out_links,
+        infobox,
+        tooltip
+    ) {
         this.departure = false;
 
         d3.select("#departure-btn").on("click", function () {
             if (this.departure) {
                 this.departure = false;
                 clear_links();
-                links_components = draw_links(in_links);
+                add_links(in_links);
                 d3.select(this).style("background", "none");
             } else {
                 this.departure = true;
                 clear_links();
-                links_components = draw_links(out_links);
+                add_links(out_links);
                 d3.select(this).style("background", "#7777");
             }
         });
 
         function clear_links() {
-            for (let i = 0; i < links_components.length; ++i) {
+            for (let i = links_components.length - 1; i >= 0; --i) {
                 links_components[i].remove();
+                links_components.pop();
+            }
+        }
+
+        function add_links(links) {
+            var components = draw_links(links, infobox, tooltip);
+            for (let i = 0; i < components.length; ++i) {
+                links_components.push(components[i]);
             }
         }
     }
