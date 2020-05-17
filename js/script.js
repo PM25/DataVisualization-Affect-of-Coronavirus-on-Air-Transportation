@@ -19,7 +19,7 @@ function main() {
     const Sensitivity = 50;
     const TaiwanCoords = [121.5654, 25.033];
     const CountriesColor = "#639a67";
-    const ZoomRange = [0.3, 15];
+    const ZoomRange = [0.2, 15];
     const LinksScale = 0.01;
 
     var files = [
@@ -277,7 +277,7 @@ function main() {
         points_dynamic_scale = false,
         color = "#ffb367",
         link_duration = 3000,
-        point_duration = 10000
+        point_duration = 20000
     ) {
         let links_base = svg.selectAll("_path").data(links_data).enter();
 
@@ -316,9 +316,20 @@ function main() {
             .append("circle")
             .attr("id", (d) => "point" + d.code)
             .attr("r", InitialScale / 150)
+            .attr("cx", (d, i) => {
+                let path_node = links.nodes()[i],
+                    point = path_node.getPointAtLength(0);
+                return point.x;
+            })
+            .attr("cy", (d, i) => {
+                let path_node = links.nodes()[i],
+                    point = path_node.getPointAtLength(0);
+                return point.y;
+            })
+            .style("transition-duration", "0.1s")
             .style("fill", "orange")
             .style("opacity", 0.9);
-        points_transition();
+        points_transition(link_duration);
 
         function links_transition(path) {
             path.transition()
@@ -337,41 +348,51 @@ function main() {
             }
         }
 
-        function points_transition(start_pos = 0) {
-            let points_transition_scale = [0.5, 0.75, 1];
+        function points_transition(delay = 0) {
             points
                 .transition()
-                .delay(link_duration / 4)
+                .delay(delay)
                 .duration(point_duration)
-                .ease(d3.easePoly)
+                .ease(d3.easePolyOut.exponent(1.5))
                 .tween("pathTween", function (d, i) {
-                    return pathTween(links.nodes()[i]);
+                    return pathTween(links.nodes()[i], flights_data[d.code]);
                 })
                 .on("end", function () {
                     points_transition();
                 });
 
-            function pathTween(path_node) {
-                // let length = path_node.getTotalLength();
-                // let r = d3.interpolate(start_pos, length);
+            function pathTween(path_node, flight_data) {
+                let people_count = [
+                    parseInt(flight_data["12月"].split(",").join(""), 10),
+                    parseInt(flight_data["1月"].split(",").join(""), 10),
+                    parseInt(flight_data["2月"].split(",").join(""), 10),
+                    parseInt(flight_data["3月"].split(",").join(""), 10),
+                ];
+                for (let i = people_count.length - 1; i >= 0; --i) {
+                    people_count[i] /= people_count[0];
+                }
+
+                let points_transition_scale = people_count;
+
                 return function (t) {
-                    let length = path_node.getTotalLength();
-                    let r = d3.interpolate(start_pos, length);
-                    let point = path_node.getPointAtLength(r(t));
-                    let transition_scale_length =
-                        points_transition_scale.length;
+                    let length = path_node.getTotalLength(),
+                        r = d3.interpolate(0, length),
+                        point = path_node.getPointAtLength(r(t)),
+                        transition_scale_length =
+                            points_transition_scale.length;
 
                     if (points_dynamic_scale) {
                         for (let i = 1; i <= transition_scale_length; ++i) {
                             if (t * transition_scale_length <= i) {
                                 t = points_transition_scale[i - 1];
                                 d3.select(this)
+                                    .attr("cx", point.x)
+                                    .attr("cy", point.y)
                                     .attr(
                                         "r",
                                         t * projection.scale() * LinksScale
-                                    )
-                                    .attr("cx", point.x)
-                                    .attr("cy", point.y);
+                                    );
+
                                 break;
                             }
                         }
