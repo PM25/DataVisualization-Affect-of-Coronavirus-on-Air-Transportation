@@ -4,6 +4,7 @@
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width" />
         <link rel="stylesheet" href="css/style.css" />
+        <link rel="shortcut icon" type="image/x-icon" href="img/plane.png" />
         <script src="https://d3js.org/d3.v5.min.js"></script>
         <script src="https://d3js.org/topojson.v2.min.js"></script>
         <script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
@@ -14,7 +15,19 @@
     </head>
 
     <body>
-        <svg></svg>
+        <svg>
+            <defs id="mdef">
+                <pattern id="image" x="0" y="0" height="40" width="40">
+                    <image
+                        x="0"
+                        y="0"
+                        width="50"
+                        height="50"
+                        xlink:href="img/plane.png"
+                    ></image>
+                </pattern>
+            </defs>
+        </svg>
         <nav id="home-nav">
             <ul>
                 <li>

@@ -5,8 +5,8 @@ function main() {
         height = window.innerHeight;
 
     var svg = d3.select("svg");
-    const translation = [width / 2, height / 2];
 
+    const translation = [width / 2, height / 2];
     var projection = d3
         .geoOrthographic()
         .scale(700) // 放大倍率
@@ -17,10 +17,10 @@ function main() {
 
     const InitialScale = projection.scale();
     const Sensitivity = 50;
-    const taiwan_coords = [121.5654, 25.033];
-    const countries_color = "#639a67";
-    const zoom_range = [0.3, 15];
-    const links_scale = 0.01;
+    const TaiwanCoords = [121.5654, 25.033];
+    const CountriesColor = "#639a67";
+    const ZoomRange = [0.3, 15];
+    const LinksScale = 0.01;
 
     var files = [
         "https://unpkg.com/world-atlas@1/world/110m.json",
@@ -39,16 +39,16 @@ function main() {
 
     // Main Function
     Promise.all(promises).then(function (values) {
-        flights_data = values[1];
-        flights_data_dict = {};
-        for (let i = 0; i < flights_data.length; ++i) {
+        let world = values[0];
+        world = topojson.feature(world, world.objects.countries);
+
+        // Convert {flights_data} to dictionary
+        let flights_data = values[1],
+            flights_data_dict = {};
+        for (let i = 0; i < 10; ++i) {
             let code = flights_data[i]["代碼"];
             flights_data_dict[code] = flights_data[i];
         }
-
-        // Draw Map
-        world = values[0];
-        world = topojson.feature(world, world.objects.countries);
 
         var tooltip = create_tooltip();
         var infobox = create_infobox();
@@ -64,13 +64,20 @@ function main() {
         var links_data = create_links(flights_data);
         var in_links = links_data[0],
             out_links = links_data[1];
-        var links_components = draw_links(in_links, infobox, tooltip);
+        var links_components = draw_links(
+            flights_data_dict,
+            in_links,
+            infobox,
+            tooltip,
+            true
+        );
         var links = links_components[0],
             points = links_components[1];
 
         enable_zoom_drag(globe_bg, links, points);
         var rotation_btn = new Rotation_Btn();
         var departure_btn = new Departure_Btn(
+            flights_data_dict,
             links_components,
             in_links,
             out_links,
@@ -110,7 +117,7 @@ function main() {
             .style("padding", "1em")
             .style("box-sizing", "border-box")
             .style("visibility", "hidden")
-            .style("background", "#fffa");
+            .style("background", "#fffc");
 
         infobox
             .append("div")
@@ -148,7 +155,7 @@ function main() {
             .append("path")
             .attr("d", path)
             .attr("id", (d) => "country" + d.id)
-            .style("fill", countries_color)
+            .style("fill", CountriesColor)
             .style("cursor", "pointer")
             .on("mouseover", function (d) {
                 if (d.id in flights_data) {
@@ -184,7 +191,7 @@ function main() {
             d3.select("#country" + code).style("fill", country_color);
         } else {
             d3.select("#link" + code).style("opacity", 0.25);
-            d3.select("#country" + code).style("fill", countries_color);
+            d3.select("#country" + code).style("fill", CountriesColor);
         }
     }
 
@@ -250,12 +257,12 @@ function main() {
             in_links.push({
                 type: "LineString",
                 code: code,
-                coordinates: [target_coords, taiwan_coords],
+                coordinates: [target_coords, TaiwanCoords],
             });
             out_links.push({
                 type: "LineString",
                 code: code,
-                coordinates: [taiwan_coords, target_coords],
+                coordinates: [TaiwanCoords, target_coords],
             });
         }
 
@@ -263,11 +270,14 @@ function main() {
     }
 
     function draw_links(
+        flights_data,
         links_data,
         infobox,
         tooltip,
+        points_dynamic_scale = false,
         color = "#ffb367",
-        duration = 3000
+        link_duration = 3000,
+        point_duration = 10000
     ) {
         let links_base = svg.selectAll("_path").data(links_data).enter();
 
@@ -284,7 +294,7 @@ function main() {
             .style("cursor", "pointer")
             .style("stroke", color)
             .on("mouseover", function (d) {
-                set_tooltip(flights_data_dict[d.code], tooltip);
+                set_tooltip(flights_data[d.code], tooltip);
                 highlight(d.code, true);
             })
             .on("mousemove", function () {
@@ -297,7 +307,7 @@ function main() {
                 highlight(d.code, false);
             })
             .on("click", function (d) {
-                show_info(flights_data_dict[d.code], infobox);
+                show_info(flights_data[d.code], infobox);
             })
             .call(links_transition);
 
@@ -312,7 +322,7 @@ function main() {
 
         function links_transition(path) {
             path.transition()
-                .duration(duration)
+                .duration(link_duration)
                 .attrTween("stroke-dasharray", tweenDash)
                 .on("end", function () {
                     d3.select(this).style("stroke-dasharray", "none");
@@ -327,31 +337,50 @@ function main() {
             }
         }
 
-        function points_transition() {
+        function points_transition(start_pos = 0) {
+            let points_transition_scale = [0.5, 0.75, 1];
             points
                 .transition()
-                .delay(1500)
-                .duration(6000)
+                .delay(link_duration / 4)
+                .duration(point_duration)
                 .ease(d3.easePoly)
                 .tween("pathTween", function (d, i) {
                     return pathTween(links.nodes()[i]);
                 })
-                .on("end", points_transition);
+                .on("end", function () {
+                    points_transition();
+                });
 
             function pathTween(path_node) {
-                let length = path_node.getTotalLength();
-                let r = d3.interpolate(0, length);
+                // let length = path_node.getTotalLength();
+                // let r = d3.interpolate(start_pos, length);
                 return function (t) {
-                    var point = path_node.getPointAtLength(r(t));
+                    let length = path_node.getTotalLength();
+                    let r = d3.interpolate(start_pos, length);
+                    let point = path_node.getPointAtLength(r(t));
+                    let transition_scale_length =
+                        points_transition_scale.length;
 
-                    if (t < 0.25) t = 0.25;
-                    else if (t < 0.5) t = 0.5;
-                    else if (t < 0.75) t = 0.75;
-                    else t = 1;
-                    d3.select(this)
-                        .attr("r", t * projection.scale() * links_scale)
-                        .attr("cx", point.x)
-                        .attr("cy", point.y);
+                    if (points_dynamic_scale) {
+                        for (let i = 1; i <= transition_scale_length; ++i) {
+                            if (t * transition_scale_length <= i) {
+                                t = points_transition_scale[i - 1];
+                                d3.select(this)
+                                    .attr(
+                                        "r",
+                                        t * projection.scale() * LinksScale
+                                    )
+                                    .attr("cx", point.x)
+                                    .attr("cy", point.y);
+                                break;
+                            }
+                        }
+                    } else {
+                        d3.select(this)
+                            .attr("r", projection.scale() * LinksScale)
+                            .attr("cx", point.x)
+                            .attr("cy", point.y);
+                    }
                 };
             }
         }
@@ -374,10 +403,10 @@ function main() {
             })
         ).call(
             d3.zoom().on("zoom", () => {
-                if (d3.event.transform.k < zoom_range[0]) {
-                    d3.event.transform.k = zoom_range[0];
-                } else if (d3.event.transform.k > zoom_range[1]) {
-                    d3.event.transform.k = zoom_range[1];
+                if (d3.event.transform.k < ZoomRange[0]) {
+                    d3.event.transform.k = ZoomRange[0];
+                } else if (d3.event.transform.k > ZoomRange[1]) {
+                    d3.event.transform.k = ZoomRange[1];
                 } else {
                     projection.scale(InitialScale * d3.event.transform.k);
                     path = d3.geoPath().projection(projection);
@@ -385,9 +414,9 @@ function main() {
                     globe_bg.attr("r", projection.scale());
                     links.style(
                         "stroke-width",
-                        projection.scale() * links_scale
+                        projection.scale() * LinksScale
                     );
-                    points.attr("r", projection.scale() * links_scale);
+                    points.attr("r", projection.scale() * LinksScale);
                 }
             })
         );
@@ -423,6 +452,7 @@ function main() {
     }
 
     function Departure_Btn(
+        flights_data_dict,
         links_components,
         in_links,
         out_links,
@@ -435,12 +465,12 @@ function main() {
             if (this.departure) {
                 this.departure = false;
                 clear_links();
-                add_links(in_links);
+                add_links(in_links, true);
                 d3.select(this).style("background", "none");
             } else {
                 this.departure = true;
                 clear_links();
-                add_links(out_links);
+                add_links(out_links, false);
                 d3.select(this).style("background", "#7777");
             }
         });
@@ -452,8 +482,14 @@ function main() {
             }
         }
 
-        function add_links(links) {
-            var components = draw_links(links, infobox, tooltip);
+        function add_links(links, dynamic_size) {
+            var components = draw_links(
+                flights_data_dict,
+                links,
+                infobox,
+                tooltip,
+                dynamic_size
+            );
             for (let i = 0; i < components.length; ++i) {
                 links_components.push(components[i]);
             }

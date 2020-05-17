@@ -2,7 +2,7 @@
 
 body {
     margin: 0;
-    background-color: #eae7d9;
+    background-color: #cae8d5;
     color: #333;
     overflow: hidden;
 }
@@ -11,26 +11,6 @@ svg {
     width: 100vw;
     height: 100vh;
 }
-
-/* #infobox {
-    position: fixed;
-    display: flex;
-    flex-direction: column;
-
-    right: 0;
-    bottom: 0;
-    width: 35vw;
-    height: 60vh;
-    background-color: #ddd;
-    border-radius: 0.5em;
-    margin: 1em;
-    margin-top: 0;
-    padding: 1em;
-
-    -moz-box-sizing: border-box;
-    -webkit-box-sizing: border-box;
-    box-sizing: border-box;
-} */
 
 #home-nav {
     position: fixed;
