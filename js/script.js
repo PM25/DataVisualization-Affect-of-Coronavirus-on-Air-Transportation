@@ -85,6 +85,7 @@ function main() {
             infobox,
             tooltip
         );
+        var show_people_btn = new Show_People_Btn(links_components);
     });
 
     function create_tooltip() {
@@ -506,5 +507,22 @@ function main() {
                 links_components.push(components[i]);
             }
         }
+    }
+
+    function Show_People_Btn(links_components) {
+        this.show = false;
+
+        d3.select("#people-btn").on("click", function () {
+            let points = links_components[1];
+            if (this.show) {
+                this.show = false;
+                d3.select(this).style("background", "none");
+                points.style("fill", "orange");
+            } else {
+                this.show = true;
+                d3.select(this).style("background", "#7777");
+                points.style("fill", "url(#image");
+            }
+        });
     }
 }
