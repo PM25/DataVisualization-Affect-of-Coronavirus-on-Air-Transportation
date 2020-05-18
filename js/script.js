@@ -21,6 +21,7 @@ function main() {
     const CountriesColor = "#639a67";
     const ZoomRange = [0.2, 15];
     const LinksScale = 0.01;
+    const count = 11;
 
     var files = [
         "https://unpkg.com/world-atlas@1/world/110m.json",
@@ -45,7 +46,7 @@ function main() {
         // Convert {flights_data} to dictionary
         let flights_data = values[1],
             flights_data_dict = {};
-        for (let i = 0; i < 10; ++i) {
+        for (let i = 0; i < count; ++i) {
             let code = flights_data[i]["代碼"];
             flights_data_dict[code] = flights_data[i];
         }
@@ -61,7 +62,7 @@ function main() {
         );
         var boundries = draw_boundries(world);
         var graticule = draw_graticule();
-        var links_data = create_links(flights_data);
+        var links_data = create_links(flights_data, count);
         var in_links = links_data[0],
             out_links = links_data[1];
         var links_components = draw_links(
@@ -198,21 +199,10 @@ function main() {
     function show_info(flight_data, infobox) {
         infobox.style("visibility", "visible");
         infobox.select(".title").text(flight_data["國家"]);
-        infobox
-            .select(".content")
-            .html(
-                "2019年 12月: " +
-                    flight_data["12月"] +
-                    "<br>" +
-                    "2020年 1月: " +
-                    flight_data["1月"] +
-                    "<br>" +
-                    "2020年 2月: " +
-                    flight_data["2月"] +
-                    "<br>" +
-                    "2020年 3月: " +
-                    flight_data["3月"]
-            );
+
+        // TODO: Modifiy below code.
+        console.log(flight_data["name"]);
+        infobox.append("svg");
     }
 
     function set_tooltip(flight_data, tooltip) {
@@ -370,6 +360,7 @@ function main() {
                 ];
                 for (let i = people_count.length - 1; i >= 0; --i) {
                     people_count[i] /= people_count[0];
+                    people_count[i] *= 1.5;
                 }
 
                 let points_transition_scale = people_count;
