@@ -23,6 +23,7 @@ function main() {
     const ZoomRange = [0.2, 15];
     const LinksScale = 0.01;
     const count = 11;
+    const data_date = ["2019年12月", "2020年1月", "2020年2月", "2020年3月"];
 
     var files = [
         "https://unpkg.com/world-atlas@1/world/110m.json",
@@ -71,6 +72,7 @@ function main() {
             flights_data_dict,
             in_links,
             infobox,
+            titlebox,
             tooltip,
             true,
             point_color
@@ -86,6 +88,7 @@ function main() {
             in_links,
             out_links,
             infobox,
+            titlebox,
             tooltip
         );
         var show_people_btn = new Show_People_Btn(
@@ -118,12 +121,12 @@ function main() {
             .style("right", 0)
             .style("top", 0)
             .style("margin", "1em")
-            .style("width", "35vw")
+            .style("max-width", "24em")
             .style("padding", ".5em")
             .style("background-color", "#ddd")
             .style("border-radius", ".5em")
             .style("border-style", "solid")
-            .style("border-color", "#fff5")
+            .style("border-color", "#ccc3")
             .style("background-color", "transparent");
 
         titlebox
@@ -131,21 +134,26 @@ function main() {
             .attr("class", "title")
             .style("font-size", "1.5em")
             .style("text-align", "center")
+            .style("color", "#222c")
             .html(title);
 
-        let svg = titlebox.append("svg").style("height", "2.5em");
+        let svg = titlebox
+            .append("svg")
+            .style("height", "2.5em")
+            .style("max-width", "21em");
         svg.append("circle")
-            .attr("cx", "5em")
+            .attr("cx", "2.5em")
             .attr("cy", "1.5em")
             .attr("r", ".5em")
             .style("fill", "orange");
         svg.append("text")
-            .attr("x", "6em")
+            .attr("x", "3.5em")
             .attr("y", "1.5em")
             .text("航班數量")
             .style("font-size", "1em")
             .attr("text-anchor", "left")
-            .attr("alignment-baseline", "middle");
+            .attr("alignment-baseline", "middle")
+            .style("fill", "#333d");
 
         return titlebox;
     }
@@ -313,6 +321,7 @@ function main() {
         flights_data,
         links_data,
         infobox,
+        titlebox,
         tooltip,
         points_dynamic_scale = false,
         point_color = "orange",
@@ -372,6 +381,13 @@ function main() {
             .style("opacity", 0.9);
         points_transition(link_duration);
 
+        // show titlebox or not
+        if (points_dynamic_scale) {
+            titlebox.select("svg").style("display", "block");
+        } else {
+            titlebox.select("svg").style("display", "none");
+        }
+
         function links_transition(path) {
             path.transition()
                 .duration(link_duration)
@@ -403,12 +419,16 @@ function main() {
                 });
 
             function pathTween(path_node, flight_data) {
-                let people_count = [
-                    parseInt(flight_data["12月"].split(",").join(""), 10),
-                    parseInt(flight_data["1月"].split(",").join(""), 10),
-                    parseInt(flight_data["2月"].split(",").join(""), 10),
-                    parseInt(flight_data["3月"].split(",").join(""), 10),
-                ];
+                let people_count = [];
+                for (let i = 0; i < data_date.length; ++i) {
+                    people_count.push(
+                        parseInt(
+                            flight_data[data_date[i]].split(",").join(""),
+                            10
+                        )
+                    );
+                }
+
                 for (let i = people_count.length - 1; i >= 0; --i) {
                     people_count[i] /= people_count[0];
                     people_count[i] *= 1.5;
@@ -434,6 +454,10 @@ function main() {
                                         "r",
                                         t * projection.scale() * LinksScale
                                     );
+
+                                titlebox
+                                    .select("text")
+                                    .html("航班數量 - " + data_date[i - 1]);
 
                                 break;
                             }
@@ -520,6 +544,7 @@ function main() {
         in_links,
         out_links,
         infobox,
+        titlebox,
         tooltip
     ) {
         this.departure = false;
@@ -550,6 +575,7 @@ function main() {
                 flights_data_dict,
                 links,
                 infobox,
+                titlebox,
                 tooltip,
                 dynamic_size,
                 point_color
