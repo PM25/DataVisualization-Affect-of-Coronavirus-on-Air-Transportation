@@ -1,10 +1,12 @@
 @import url("https://use.fontawesome.com/releases/v5.5.0/css/all.css");
+@import url("https://fonts.googleapis.com/earlyaccess/notosanstc.css");
 
 body {
     margin: 0;
     background-color: #cae8d5;
     color: #333;
     overflow: hidden;
+    font-family: "Noto Sans TC", sans-serif;
 }
 
 svg {

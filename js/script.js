@@ -19,6 +19,7 @@ function main() {
     const Sensitivity = 50;
     const TaiwanCoords = [121.5654, 25.033];
     const CountriesColor = "#639a67";
+    const point_color = "orange";
     const ZoomRange = [0.2, 15];
     const LinksScale = 0.01;
     const count = 11;
@@ -52,6 +53,7 @@ function main() {
         }
 
         var tooltip = create_tooltip();
+        var titlebox = create_titlebox("大學報 - 航空業面臨疫情之影響");
         var infobox = create_infobox();
         var globe_bg = draw_globe_bg(infobox);
         var countries = draw_countries(
@@ -70,7 +72,8 @@ function main() {
             in_links,
             infobox,
             tooltip,
-            true
+            true,
+            point_color
         );
         var links = links_components[0],
             points = links_components[1];
@@ -85,7 +88,11 @@ function main() {
             infobox,
             tooltip
         );
-        var show_people_btn = new Show_People_Btn(links_components);
+        var show_people_btn = new Show_People_Btn(
+            links_components,
+            titlebox,
+            point_color
+        );
     });
 
     function create_tooltip() {
@@ -101,6 +108,46 @@ function main() {
             .style("border-radius", ".3em");
 
         return tooltip;
+    }
+
+    function create_titlebox(title) {
+        let titlebox = d3
+            .select("body")
+            .append("div")
+            .style("position", "fixed")
+            .style("right", 0)
+            .style("top", 0)
+            .style("margin", "1em")
+            .style("width", "35vw")
+            .style("padding", ".5em")
+            .style("background-color", "#ddd")
+            .style("border-radius", ".5em")
+            .style("border-style", "solid")
+            .style("border-color", "#fff5")
+            .style("background-color", "transparent");
+
+        titlebox
+            .append("div")
+            .attr("class", "title")
+            .style("font-size", "1.5em")
+            .style("text-align", "center")
+            .html(title);
+
+        let svg = titlebox.append("svg").style("height", "2.5em");
+        svg.append("circle")
+            .attr("cx", "5em")
+            .attr("cy", "1.5em")
+            .attr("r", ".5em")
+            .style("fill", "orange");
+        svg.append("text")
+            .attr("x", "6em")
+            .attr("y", "1.5em")
+            .text("航班數量")
+            .style("font-size", "1em")
+            .attr("text-anchor", "left")
+            .attr("alignment-baseline", "middle");
+
+        return titlebox;
     }
 
     function create_infobox() {
@@ -119,12 +166,14 @@ function main() {
             .style("padding", "1em")
             .style("box-sizing", "border-box")
             .style("visibility", "hidden")
-            .style("background", "#fffc");
+            .style("background", "#8ccbbe55")
+            .style("border", "1px solid #aaa9");
 
         infobox
             .append("div")
             .attr("class", "title")
-            .style("font-size", "1.5em");
+            .style("font-size", "1.3em")
+            .style("color", "#333c");
 
         infobox.append("div").attr("class", "content");
 
@@ -266,7 +315,8 @@ function main() {
         infobox,
         tooltip,
         points_dynamic_scale = false,
-        color = "#ffb367",
+        point_color = "orange",
+        link_color = "#ffb367",
         link_duration = 3000,
         point_duration = 20000
     ) {
@@ -283,7 +333,7 @@ function main() {
             .style("stroke-linecap", "round")
             .style("opacity", 0.25)
             .style("cursor", "pointer")
-            .style("stroke", color)
+            .style("stroke", link_color)
             .on("mouseover", function (d) {
                 set_tooltip(flights_data[d.code], tooltip);
                 highlight(d.code, true);
@@ -318,7 +368,7 @@ function main() {
                 return point.y;
             })
             .style("transition-duration", "0.1s")
-            .style("fill", "orange")
+            .style("fill", point_color)
             .style("opacity", 0.9);
         points_transition(link_duration);
 
@@ -501,7 +551,8 @@ function main() {
                 links,
                 infobox,
                 tooltip,
-                dynamic_size
+                dynamic_size,
+                point_color
             );
             for (let i = 0; i < components.length; ++i) {
                 links_components.push(components[i]);
@@ -509,7 +560,7 @@ function main() {
         }
     }
 
-    function Show_People_Btn(links_components) {
+    function Show_People_Btn(links_components, titlebox, point_color) {
         this.show = false;
 
         d3.select("#people-btn").on("click", function () {
@@ -517,11 +568,19 @@ function main() {
             if (this.show) {
                 this.show = false;
                 d3.select(this).style("background", "none");
-                points.style("fill", "orange");
+                points.style("fill", point_color);
+                titlebox
+                    .select("circle")
+                    .style("fill", point_color)
+                    .attr("r", ".5em");
             } else {
                 this.show = true;
                 d3.select(this).style("background", "#7777");
-                points.style("fill", "url(#image");
+                points.style("fill", "url(#image)");
+                titlebox
+                    .select("circle")
+                    .style("fill", "url(#image)")
+                    .attr("r", "1em");
             }
         });
     }
