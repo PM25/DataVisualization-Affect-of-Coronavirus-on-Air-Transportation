@@ -55,7 +55,7 @@ function main() {
 
         var tooltip = create_tooltip();
         var titlebox = create_titlebox("大學報 - 航空業面臨疫情之影響");
-        var infobox = create_infobox();
+        var infobox = create_infobox(titlebox);
         var globe_bg = draw_globe_bg(infobox);
         var countries = draw_countries(
             world,
@@ -121,13 +121,19 @@ function main() {
             .style("right", 0)
             .style("top", 0)
             .style("margin", "1em")
-            .style("max-width", "24em")
             .style("padding", ".5em")
             .style("background-color", "#ddd")
             .style("border-radius", ".5em")
             .style("border-style", "solid")
             .style("border-color", "#ccc3")
-            .style("background-color", "transparent");
+            .style("background-color", "transparent")
+            .style("cursor", "pointer")
+            .on("mouseover", function () {
+                d3.select(this).style("border-color", "#ccc");
+            })
+            .on("mouseout", function () {
+                d3.select(this).style("border-color", "#ccc3");
+            });
 
         titlebox
             .append("div")
@@ -158,24 +164,27 @@ function main() {
         return titlebox;
     }
 
-    function create_infobox() {
-        let infobox = d3
-            .select("body")
+    function create_infobox(root = null) {
+        if (root == null) {
+            root = d3.select("body");
+        }
+
+        let infobox = root
             .append("div")
-            .style("position", "fixed")
-            .style("right", 0)
-            .style("bottom", 0)
-            .style("width", "35vw")
+            .attr("id", "infobox")
             .style("height", "60vh")
+            .style("width", "inherit")
             .style("background-color", "#ddd")
             .style("border-radius", ".5em")
-            .style("margin", "1em")
-            .style("margin-top", 0)
+            .style("margin", ".5em")
             .style("padding", "1em")
             .style("box-sizing", "border-box")
-            .style("visibility", "hidden")
+            .style("display", "none")
             .style("background", "#8ccbbe55")
             .style("border", "1px solid #aaa9");
+        // .on("click", function () {
+        //     d3.select(this).style("width", "50vw").style("height", "65vh");
+        // });
 
         infobox
             .append("div")
@@ -184,6 +193,7 @@ function main() {
             .style("color", "#333c");
 
         infobox.append("div").attr("class", "content");
+        infobox.append("svg").style("width", "inherit").style("height", "100%");
 
         return infobox;
     }
@@ -200,7 +210,7 @@ function main() {
             .attr("class", "globe_bg")
             .attr("cursor", "pointer")
             .on("click", function () {
-                infobox.style("visibility", "hidden");
+                infobox.style("display", "none");
             });
 
         return globe_bg;
@@ -237,7 +247,7 @@ function main() {
                 if (d.id in flights_data) {
                     show_info(flights_data[d.id], infobox);
                 } else {
-                    infobox.style("visibility", "hidden");
+                    infobox.style("display", "none");
                 }
             });
 
@@ -255,12 +265,12 @@ function main() {
     }
 
     function show_info(flight_data, infobox) {
-        infobox.style("visibility", "visible");
+        infobox.style("display", "block");
         infobox.select(".title").text(flight_data["國家"]);
 
         // TODO: Modifiy below code.
         console.log(flight_data["name"]);
-        infobox.append("svg");
+        infobox.select("svg");
     }
 
     function set_tooltip(flight_data, tooltip) {
