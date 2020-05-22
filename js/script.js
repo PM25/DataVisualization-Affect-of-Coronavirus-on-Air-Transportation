@@ -18,8 +18,10 @@ function main() {
     const InitialScale = projection.scale();
     const Sensitivity = 50;
     const TaiwanCoords = [121.5654, 25.033];
-    const CountriesColor = "#639a67";
+    const CountriesColor = "#F4F6FC";
     const point_color = "orange";
+    const ocean_color = "#CCDCF2";
+    const link_color = "#5A7BB5";
     const ZoomRange = [0.2, 15];
     const LinksScale = 0.01;
     const count = 11;
@@ -56,7 +58,7 @@ function main() {
         var tooltip = create_tooltip();
         var titlebox = create_titlebox("大學報 - 航空業面臨疫情之影響");
         var infobox = create_infobox(titlebox);
-        var globe_bg = draw_globe_bg(infobox);
+        var globe_bg = draw_globe_bg(infobox, ocean_color);
         var countries = draw_countries(
             world,
             tooltip,
@@ -75,7 +77,8 @@ function main() {
             titlebox,
             tooltip,
             true,
-            point_color
+            point_color,
+            link_color
         );
         var links = links_components[0],
             points = links_components[1];
@@ -198,10 +201,10 @@ function main() {
         return infobox;
     }
 
-    function draw_globe_bg(infobox) {
+    function draw_globe_bg(infobox, color = "#97E5EF") {
         let globe_bg = svg
             .append("circle")
-            .attr("fill", "#588da8")
+            .attr("fill", color)
             .attr("stroke", "#000")
             .attr("stroke-width", "0.2")
             .attr("cx", translation[0])
@@ -295,7 +298,7 @@ function main() {
             .datum(d3.geoGraticule().step(step))
             .attr("d", path)
             .style("fill", "none")
-            .style("stroke", "#cccc")
+            .style("stroke", "#bbbc")
             .style("stroke-width", 0.2);
 
         return graticule;
@@ -335,7 +338,7 @@ function main() {
         tooltip,
         points_dynamic_scale = false,
         point_color = "orange",
-        link_color = "#ffb367",
+        link_color = "orange",
         link_duration = 3000,
         point_duration = 20000
     ) {
@@ -386,7 +389,6 @@ function main() {
                     point = path_node.getPointAtLength(0);
                 return point.y;
             })
-            .style("transition-duration", "0.1s")
             .style("fill", point_color)
             .style("opacity", 0.9);
         points_transition(link_duration);
@@ -588,7 +590,8 @@ function main() {
                 titlebox,
                 tooltip,
                 dynamic_size,
-                point_color
+                point_color,
+                link_color
             );
             for (let i = 0; i < components.length; ++i) {
                 links_components.push(components[i]);
