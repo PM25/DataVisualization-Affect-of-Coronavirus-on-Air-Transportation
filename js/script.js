@@ -9,20 +9,20 @@ function main() {
     const translation = [width / 2, height / 2];
     var projection = d3
         .geoOrthographic()
-        .scale(700) // 放大倍率
-        .center([0, 0])
+        .scale(width / 2.5) // 放大倍率
+        .center([0, -3])
         .rotate([-121.5654, -25.033])
         .translate(translation); // 置中
     var path = d3.geoPath().projection(projection);
 
     const InitialScale = projection.scale();
-    const Sensitivity = 50;
+    const Sensitivity = 5000;
     const TaiwanCoords = [121.5654, 25.033];
     const CountriesColor = "#F4F6FC";
-    const point_color = "orange";
     const ocean_color = "#CCDCF2";
+    const point_color = "orange";
     const link_color = "#5A7BB5";
-    const ZoomRange = [0.2, 15];
+    const ZoomRange = [1, 1];
     const LinksScale = 0.01;
     const count = 11;
     const data_date = ["2019年12月", "2020年1月", "2020年2月", "2020年3月"];
@@ -339,8 +339,8 @@ function main() {
         points_dynamic_scale = false,
         point_color = "orange",
         link_color = "orange",
-        link_duration = 3000,
-        point_duration = 20000
+        link_duration = 10000,
+        point_duration = 10000
     ) {
         let links_base = svg.selectAll("_path").data(links_data).enter();
 
@@ -371,8 +371,8 @@ function main() {
             })
             .on("click", function (d) {
                 show_info(flights_data[d.code], infobox);
-            })
-            .call(links_transition);
+            });
+        links_transition();
 
         // Draw Points
         var points = links_base
@@ -391,7 +391,7 @@ function main() {
             })
             .style("fill", point_color)
             .style("opacity", 0.9);
-        points_transition(link_duration);
+        points_transition();
 
         // show titlebox or not
         if (points_dynamic_scale) {
@@ -400,18 +400,19 @@ function main() {
             titlebox.select("svg").style("display", "none");
         }
 
-        function links_transition(path) {
-            path.transition()
+        function links_transition() {
+            links
+                .transition()
                 .duration(link_duration)
                 .attrTween("stroke-dasharray", tweenDash)
                 .on("end", function () {
-                    d3.select(this).style("stroke-dasharray", "none");
+                    links_transition();
                 });
 
             function tweenDash() {
-                let l = this.getTotalLength(),
-                    i = d3.interpolateString("0," + l, l + "," + l);
                 return function (t) {
+                    let l = this.getTotalLength(),
+                        i = d3.interpolateString("0," + l, l + "," + l);
                     return i(t);
                 };
             }
@@ -422,7 +423,6 @@ function main() {
                 .transition()
                 .delay(delay)
                 .duration(point_duration)
-                .ease(d3.easePolyOut.exponent(1.5))
                 .tween("pathTween", function (d, i) {
                     return pathTween(links.nodes()[i], flights_data[d.code]);
                 })
@@ -489,36 +489,87 @@ function main() {
 
     function enable_zoom_drag(globe_bg, links, points) {
         svg.call(
-            d3.drag().on("drag", () => {
-                const rotate = projection.rotate();
-                const k = Sensitivity / projection.scale();
-                projection.rotate([
-                    rotate[0] + d3.event.dx * k,
-                    rotate[1] - d3.event.dy * k,
-                ]);
-                // Update all path
-                path = d3.geoPath().projection(projection);
-                svg.selectAll("path").attr("d", path);
-            })
-        ).call(
             d3.zoom().on("zoom", () => {
+                var curr_rotate = projection.rotate();
+
                 if (d3.event.transform.k < ZoomRange[0]) {
                     d3.event.transform.k = ZoomRange[0];
+                    var next_rotate = [-TaiwanCoords[0], -TaiwanCoords[1]];
                 } else if (d3.event.transform.k > ZoomRange[1]) {
                     d3.event.transform.k = ZoomRange[1];
-                } else {
-                    projection.scale(InitialScale * d3.event.transform.k);
-                    path = d3.geoPath().projection(projection);
-                    svg.selectAll("path").attr("d", path);
-                    globe_bg.attr("r", projection.scale());
-                    links.style(
-                        "stroke-width",
-                        projection.scale() * LinksScale
-                    );
-                    points.attr("r", projection.scale() * LinksScale);
+                    var next_rotate = [
+                        -TaiwanCoords[0] - 130,
+                        -TaiwanCoords[1] - 15,
+                    ];
+                }
+
+                if (next_rotate != curr_rotate) {
+                    svg.selectAll("path").attr("d", function (d) {
+                        if (d3.select(this).attr("class") != "link") {
+                            d3.select(this)
+                                .transition()
+                                .duration(300)
+                                .attrTween("d", function (d) {
+                                    let r = d3.interpolate(
+                                        curr_rotate,
+                                        next_rotate
+                                    );
+
+                                    return function (t) {
+                                        projection.rotate(r(t));
+                                        path = d3
+                                            .geoPath()
+                                            .projection(projection);
+                                        let pathD = path(d);
+                                        return pathD == null ? "" : pathD;
+                                    };
+                                });
+                        } else {
+                            projection.rotate(next_rotate);
+                            path = d3.geoPath().projection(projection);
+                            let curr_link = d3.select(this);
+                            setTimeout(function () {
+                                curr_link.attr("d", path);
+                            }, 300);
+                        }
+                    });
+
+                    // svg.selectAll("path")
+                    //     .transition()
+                    //     .duration(300)
+                    //     .attrTween("d", function (d) {
+                    //         let r = d3.interpolate(curr_rotate, next_rotate);
+
+                    //         return function (t) {
+                    //             projection.rotate(r(t));
+                    //             path = d3.geoPath().projection(projection);
+                    //             let pathD = path(d);
+                    //             return pathD == null ? "" : pathD;
+                    //         };
+                    //     });
                 }
             })
         );
+    }
+
+    function rotate_until(end_rotate) {
+        let rotate = projection.rotate();
+        let k = Sensitivity / projection.scale();
+        if (rotate[0] < end_rotate[0]) {
+            k = -k;
+        }
+
+        let rotation_timer = d3.interval(function rotate(elapsed) {
+            let rotate = projection.rotate();
+            if (k > 0 && rotate[0] <= end_rotate[0]) {
+                rotation_timer.stop();
+            } else if (k < 0 && rotate[0] >= end_rotate[0]) {
+                rotation_timer.stop();
+            }
+            projection.rotate([rotate[0] - k, rotate[1]]);
+            path = d3.geoPath().projection(projection);
+            svg.selectAll("path").attr("d", path);
+        });
     }
 
     function Rotation_Btn() {
