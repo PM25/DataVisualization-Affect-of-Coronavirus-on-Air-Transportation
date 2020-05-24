@@ -83,7 +83,7 @@ function main() {
             flights_data_dict
         );
         var target_boundries = draw_boundries(target_world_mesh, "#111");
-        var rest_boundries = draw_boundries(rest_world_mesh, "#666");
+        var rest_boundries = draw_boundries(rest_world_mesh, "#999");
         var graticule = draw_graticule();
         var links_data = create_links(flights_data, count);
         var in_links = links_data[0],
@@ -581,13 +581,13 @@ function main() {
             d3.zoom().on("zoom", () => {
                 var curr_rotate = projection.rotate();
 
-                if (d3.event.transform.k < ZoomRange[0]) {
+                if (d3.event.transform.k > ZoomRange[0]) {
                     d3.event.transform.k = ZoomRange[0];
                     var next_rotate = [-TaiwanCoords[0], -TaiwanCoords[1]];
                     projection.scale(InitialScale);
                     globe_bg.attr("r", projection.scale());
                     var flat = true;
-                } else if (d3.event.transform.k > ZoomRange[1]) {
+                } else if (d3.event.transform.k < ZoomRange[1]) {
                     d3.event.transform.k = ZoomRange[1];
                     var next_rotate = [
                         -TaiwanCoords[0] - 70,
