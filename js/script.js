@@ -6,18 +6,13 @@ function main() {
 
     var svg = d3.select("svg");
 
+    const TaiwanCoords = [121.5654, 25.033];
     const translation = [width / 2, height / 2];
-    var projection = d3
-        .geoOrthographic()
-        .scale(width / 2.5) // 放大倍率
-        .center([0, -3])
-        .rotate([-121.5654, -25.033])
-        .translate(translation); // 置中
+    var projection = three_d_map(width / 2.5, translation, TaiwanCoords);
     var path = d3.geoPath().projection(projection);
 
     const InitialScale = projection.scale();
     const Sensitivity = 5000;
-    const TaiwanCoords = [121.5654, 25.033];
     const CountriesColor = "#F4F6FC";
     const ocean_color = "#CCDCF2";
     const point_color = "orange";
@@ -26,6 +21,9 @@ function main() {
     const LinksScale = 0.01;
     const count = 11;
     const data_date = ["2019年12月", "2020年1月", "2020年2月", "2020年3月"];
+
+    const img_person_id = load_img_pattern(svg, "img/person.png", "img-person");
+    const img_plane_id = load_img_pattern(svg, "img/plane.png", "img-plane");
 
     var files = [
         "https://unpkg.com/world-atlas@1/world/110m.json",
@@ -83,8 +81,13 @@ function main() {
         var links = links_components[0],
             points = links_components[1];
 
-        enable_zoom_drag(globe_bg, links, points);
+        enable_scroll_effect(globe_bg, links, points);
         var rotation_btn = new Rotation_Btn();
+        var change_icon_btn = new Change_Icon_Btn(
+            links_components,
+            titlebox,
+            point_color
+        );
         var departure_btn = new Departure_Btn(
             flights_data_dict,
             links_components,
@@ -92,14 +95,60 @@ function main() {
             out_links,
             infobox,
             titlebox,
-            tooltip
+            tooltip,
+            change_icon_btn
         );
-        var show_people_btn = new Show_People_Btn(
-            links_components,
-            titlebox,
-            point_color
-        );
+
+        d3.select("#change-icon-btn").on("click", function () {
+            change_icon_btn.change_status();
+        });
+        d3.select("#departure-btn").on("click", function () {
+            departure_btn.change_status();
+        });
     });
+
+    function load_img_pattern(root, fpath, id) {
+        root.append("defs")
+            .attr("id", "mydef")
+            .append("pattern")
+            .attr("id", id)
+            .attr("x", 0)
+            .attr("y", 0)
+            .attr("height", 1)
+            .attr("width", 1)
+            .attr("viewBox", "0 0 64 64")
+            .attr("preserveAspectRatio", "none")
+            .append("image")
+            .attr("x", 0)
+            .attr("y", 0)
+            .attr("width", 64)
+            .attr("height", 64)
+            .attr("href", fpath)
+            .attr("preserveAspectRatio", "none");
+
+        return id;
+    }
+
+    function flat_map(scale, translation, center) {
+        var projection = d3
+            .geoMercator()
+            .scale(scale) // 放大倍率
+            .center(center)
+            .translate(translation); // 置中
+
+        return projection;
+    }
+
+    function three_d_map(scale, translation, center) {
+        var projection = d3
+            .geoOrthographic()
+            .scale(scale) // 放大倍率
+            .center([0, 0])
+            .rotate([-center[0], -center[1]])
+            .translate(translation); // 置中
+
+        return projection;
+    }
 
     function create_tooltip() {
         let tooltip = d3
@@ -261,9 +310,11 @@ function main() {
         if (on) {
             d3.select("#link" + code).style("opacity", 1);
             d3.select("#country" + code).style("fill", country_color);
+            d3.select("#country158").style("fill", country_color);
         } else {
             d3.select("#link" + code).style("opacity", 0.25);
             d3.select("#country" + code).style("fill", CountriesColor);
+            d3.select("#country158").style("fill", CountriesColor);
         }
     }
 
@@ -487,20 +538,34 @@ function main() {
         return [links, points];
     }
 
-    function enable_zoom_drag(globe_bg, links, points) {
+    function enable_scroll_effect(globe_bg, links, points) {
         svg.call(
+            d3.drag().on("drag", () => {
+                const rotate = projection.rotate();
+                const k = Sensitivity / projection.scale() / 200;
+                projection.rotate([
+                    rotate[0] + d3.event.dx * k,
+                    rotate[1] - d3.event.dy * k,
+                ]);
+                // Update all path
+                path = d3.geoPath().projection(projection);
+                svg.selectAll("path").attr("d", path);
+            })
+        ).call(
             d3.zoom().on("zoom", () => {
                 var curr_rotate = projection.rotate();
 
                 if (d3.event.transform.k < ZoomRange[0]) {
                     d3.event.transform.k = ZoomRange[0];
                     var next_rotate = [-TaiwanCoords[0], -TaiwanCoords[1]];
+                    var flat = true;
                 } else if (d3.event.transform.k > ZoomRange[1]) {
                     d3.event.transform.k = ZoomRange[1];
                     var next_rotate = [
                         -TaiwanCoords[0] - 130,
                         -TaiwanCoords[1] - 15,
                     ];
+                    var flat = false;
                 }
 
                 if (next_rotate != curr_rotate) {
@@ -514,6 +579,20 @@ function main() {
                                         curr_rotate,
                                         next_rotate
                                     );
+
+                                    if (flat) {
+                                        projection = three_d_map(
+                                            width / 2.5,
+                                            translation,
+                                            TaiwanCoords
+                                        );
+                                    } else {
+                                        projection = three_d_map(
+                                            width / 2.5,
+                                            translation,
+                                            TaiwanCoords
+                                        );
+                                    }
 
                                     return function (t) {
                                         projection.rotate(r(t));
@@ -533,43 +612,9 @@ function main() {
                             }, 300);
                         }
                     });
-
-                    // svg.selectAll("path")
-                    //     .transition()
-                    //     .duration(300)
-                    //     .attrTween("d", function (d) {
-                    //         let r = d3.interpolate(curr_rotate, next_rotate);
-
-                    //         return function (t) {
-                    //             projection.rotate(r(t));
-                    //             path = d3.geoPath().projection(projection);
-                    //             let pathD = path(d);
-                    //             return pathD == null ? "" : pathD;
-                    //         };
-                    //     });
                 }
             })
         );
-    }
-
-    function rotate_until(end_rotate) {
-        let rotate = projection.rotate();
-        let k = Sensitivity / projection.scale();
-        if (rotate[0] < end_rotate[0]) {
-            k = -k;
-        }
-
-        let rotation_timer = d3.interval(function rotate(elapsed) {
-            let rotate = projection.rotate();
-            if (k > 0 && rotate[0] <= end_rotate[0]) {
-                rotation_timer.stop();
-            } else if (k < 0 && rotate[0] >= end_rotate[0]) {
-                rotation_timer.stop();
-            }
-            projection.rotate([rotate[0] - k, rotate[1]]);
-            path = d3.geoPath().projection(projection);
-            svg.selectAll("path").attr("d", path);
-        });
     }
 
     function Rotation_Btn() {
@@ -608,23 +653,34 @@ function main() {
         out_links,
         infobox,
         titlebox,
-        tooltip
+        tooltip,
+        change_icon_btn
     ) {
         this.departure = false;
 
-        d3.select("#departure-btn").on("click", function () {
-            if (this.departure) {
-                this.departure = false;
+        this.change_status = function () {
+            this.departure = !this.departure;
+
+            if (this.departure == false) {
                 clear_links();
                 add_links(in_links, true);
-                d3.select(this).style("background", "none");
+                d3.select("#change-icon-btn").attr(
+                    "class",
+                    "fas fa-walking icons"
+                );
+                d3.select("#departure-btn").style("background", "none");
+                change_icon_btn.change_status(false);
             } else {
-                this.departure = true;
                 clear_links();
                 add_links(out_links, false);
-                d3.select(this).style("background", "#7777");
+                d3.select("#change-icon-btn").attr(
+                    "class",
+                    "fas fa-plane icons"
+                );
+                d3.select("#departure-btn").style("background", "#7777");
+                change_icon_btn.change_status(false);
             }
-        });
+        };
 
         function clear_links() {
             for (let i = links_components.length - 1; i >= 0; --i) {
@@ -650,28 +706,40 @@ function main() {
         }
     }
 
-    function Show_People_Btn(links_components, titlebox, point_color) {
+    function Change_Icon_Btn(links_components, titlebox, point_color) {
         this.show = false;
 
-        d3.select("#people-btn").on("click", function () {
+        this.change_status = function (show = null) {
+            if (show == null) {
+                this.show = !this.show;
+            } else {
+                this.show = show;
+            }
+
             let points = links_components[1];
-            if (this.show) {
-                this.show = false;
-                d3.select(this).style("background", "none");
+            if (this.show == false) {
+                d3.select("#change-icon-btn").style("background", "none");
                 points.style("fill", point_color);
                 titlebox
                     .select("circle")
                     .style("fill", point_color)
                     .attr("r", ".5em");
             } else {
-                this.show = true;
-                d3.select(this).style("background", "#7777");
-                points.style("fill", "url(#image)");
+                let classes = d3.select("#change-icon-btn").attr("class"),
+                    img_id;
+                if (classes == "fas fa-walking icons") {
+                    img_id = img_person_id;
+                } else if (classes == "fas fa-plane icons") {
+                    img_id = img_plane_id;
+                }
+
+                d3.select("#change-icon-btn").style("background", "#7777");
+                points.style("fill", "url(#" + img_id + ")");
                 titlebox
                     .select("circle")
-                    .style("fill", "url(#image)")
+                    .style("fill", "url(#" + img_id + ")")
                     .attr("r", "1em");
             }
-        });
+        };
     }
 }
