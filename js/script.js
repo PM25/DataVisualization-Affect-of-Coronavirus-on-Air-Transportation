@@ -18,8 +18,9 @@ function main() {
     const point_color = "orange";
     const link_color = "#5A7BB5";
     const ZoomRange = [1, 1];
-    const LinksScale = 0.01;
-    var PointsScale = LinksScale * 1.5;
+    const LinksScale = 0.013;
+    const PointsScaleList = [0.015, 0.03];
+    var PointsScale = PointsScaleList[0];
     const count = 10;
     const data_date = ["2019年12月", "2020年1月", "2020年2月", "2020年3月"];
 
@@ -44,7 +45,6 @@ function main() {
     // Main Function
     Promise.all(promises).then(function (values) {
         let world = values[0];
-        world = topojson.feature(world, world.objects.countries);
 
         // Convert {flights_data} to dictionary
         let flights_data = values[1],
@@ -54,17 +54,36 @@ function main() {
             flights_data_dict[code] = flights_data[i];
         }
 
+        let topojson_world = topojson.feature(world, world.objects.countries);
+        let target_world_mesh = topojson.mesh(
+            world,
+            world.objects.countries,
+            function (a, b) {
+                return a.id in flights_data_dict || b.id in flights_data_dict;
+            }
+        );
+        let rest_world_mesh = topojson.mesh(
+            world,
+            world.objects.countries,
+            function (a, b) {
+                return !(
+                    a.id in flights_data_dict || b.id in flights_data_dict
+                );
+            }
+        );
+
         var tooltip = create_tooltip();
         var titlebox = create_titlebox("大學報 - 航空業面臨疫情之影響 (入境)");
         var infobox = create_infobox(titlebox);
         var globe_bg = draw_globe_bg(infobox, ocean_color);
         var countries = draw_countries(
-            world,
+            topojson_world,
             tooltip,
             infobox,
             flights_data_dict
         );
-        var boundries = draw_boundries(world);
+        var target_boundries = draw_boundries(target_world_mesh, "#111");
+        var rest_boundries = draw_boundries(rest_world_mesh, "#666");
         var graticule = draw_graticule();
         var links_data = create_links(flights_data, count);
         var in_links = links_data[0],
@@ -278,6 +297,13 @@ function main() {
             .attr("d", path)
             .attr("id", (d) => "country" + d.id)
             .style("fill", CountriesColor)
+            .style("opacity", (d) => {
+                if (d.id in flights_data) {
+                    return 1;
+                } else {
+                    return 0.85;
+                }
+            })
             .style("cursor", "pointer")
             .on("mouseover", function (d) {
                 if (d.id in flights_data) {
@@ -332,14 +358,14 @@ function main() {
         tooltip.text(flight_data["國家"]).style("visibility", "visible");
     }
 
-    function draw_boundries(world) {
+    function draw_boundries(world, color = "#333") {
         let boundaries = svg
             .append("path")
             .datum(world)
             .attr("d", path)
             .style("fill", "none")
-            .style("stroke", "#333")
-            .style("stroke-width", "0.01em");
+            .style("stroke", color)
+            .style("stroke-width", "0.015em");
 
         return boundaries;
     }
@@ -403,7 +429,7 @@ function main() {
             .attr("class", "link")
             .attr("id", (d) => "link" + d.code)
             .style("fill", "none")
-            .style("stroke-width", InitialScale / 150)
+            .style("stroke-width", projection.scale() * LinksScale)
             .style("stroke-linecap", "round")
             .style("opacity", 0.25)
             .style("cursor", "pointer")
@@ -558,12 +584,18 @@ function main() {
                 if (d3.event.transform.k < ZoomRange[0]) {
                     d3.event.transform.k = ZoomRange[0];
                     var next_rotate = [-TaiwanCoords[0], -TaiwanCoords[1]];
+                    projection.scale(InitialScale);
+                    globe_bg.attr("r", projection.scale());
+                    var flat = true;
                 } else if (d3.event.transform.k > ZoomRange[1]) {
                     d3.event.transform.k = ZoomRange[1];
                     var next_rotate = [
-                        -TaiwanCoords[0] - 60,
-                        -TaiwanCoords[1] - 40,
+                        -TaiwanCoords[0] - 70,
+                        -TaiwanCoords[1] - 20,
                     ];
+                    projection.scale(InitialScale * 0.7);
+                    globe_bg.attr("r", projection.scale());
+                    var flat = false;
                 }
 
                 if (next_rotate != curr_rotate) {
@@ -712,7 +744,7 @@ function main() {
             if (this.show == false) {
                 d3.select("#change-icon-btn").style("background", "none");
                 points.style("fill", point_color);
-                PointsScale = LinksScale * 1.5;
+                PointsScale = PointsScaleList[0];
                 titlebox
                     .select("circle")
                     .style("fill", point_color)
@@ -728,7 +760,7 @@ function main() {
 
                 d3.select("#change-icon-btn").style("background", "#7777");
                 points.style("fill", "url(#" + img_id + ")");
-                PointsScale = LinksScale * 3;
+                PointsScale = PointsScaleList[1];
                 titlebox
                     .select("circle")
                     .style("fill", "url(#" + img_id + ")")
