@@ -19,6 +19,7 @@ function main() {
     const link_color = "#5A7BB5";
     const ZoomRange = [1, 1];
     const LinksScale = 0.01;
+    var PointsScale = LinksScale;
     const count = 11;
     const data_date = ["2019年12月", "2020年1月", "2020年2月", "2020年3月"];
 
@@ -54,7 +55,7 @@ function main() {
         }
 
         var tooltip = create_tooltip();
-        var titlebox = create_titlebox("大學報 - 航空業面臨疫情之影響");
+        var titlebox = create_titlebox("大學報 - 航空業面臨疫情之影響 (入境)");
         var infobox = create_infobox(titlebox);
         var globe_bg = draw_globe_bg(infobox, ocean_color);
         var countries = draw_countries(
@@ -515,7 +516,7 @@ function main() {
                                     .attr("cy", point.y)
                                     .attr(
                                         "r",
-                                        t * projection.scale() * LinksScale
+                                        t * projection.scale() * PointsScale
                                     );
 
                                 titlebox
@@ -527,7 +528,7 @@ function main() {
                         }
                     } else {
                         d3.select(this)
-                            .attr("r", projection.scale() * LinksScale)
+                            .attr("r", projection.scale() * PointsScale)
                             .attr("cx", point.x)
                             .attr("cy", point.y);
                     }
@@ -664,6 +665,9 @@ function main() {
             if (this.departure == false) {
                 clear_links();
                 add_links(in_links, true);
+                titlebox
+                    .select(".title")
+                    .html("大學報 - 航空業面臨疫情之影響 (入境)");
                 d3.select("#change-icon-btn").attr(
                     "class",
                     "fas fa-walking icons"
@@ -673,6 +677,9 @@ function main() {
             } else {
                 clear_links();
                 add_links(out_links, false);
+                titlebox
+                    .select(".title")
+                    .html("大學報 - 航空業面臨疫情之影響 (出境)");
                 d3.select("#change-icon-btn").attr(
                     "class",
                     "fas fa-plane icons"
@@ -720,6 +727,7 @@ function main() {
             if (this.show == false) {
                 d3.select("#change-icon-btn").style("background", "none");
                 points.style("fill", point_color);
+                PointsScale = LinksScale;
                 titlebox
                     .select("circle")
                     .style("fill", point_color)
@@ -735,6 +743,7 @@ function main() {
 
                 d3.select("#change-icon-btn").style("background", "#7777");
                 points.style("fill", "url(#" + img_id + ")");
+                PointsScale = LinksScale * 2.5;
                 titlebox
                     .select("circle")
                     .style("fill", "url(#" + img_id + ")")
