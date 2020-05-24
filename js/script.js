@@ -8,19 +8,19 @@ function main() {
 
     const TaiwanCoords = [121.5654, 25.033];
     const translation = [width / 2, height / 2];
-    var projection = three_d_map(width / 2.5, translation, TaiwanCoords);
+    var projection = three_d_map(width / 1.8, translation, TaiwanCoords);
     var path = d3.geoPath().projection(projection);
 
     const InitialScale = projection.scale();
-    const Sensitivity = 5000;
+    const Sensitivity = 100;
     const CountriesColor = "#F4F6FC";
     const ocean_color = "#CCDCF2";
     const point_color = "orange";
     const link_color = "#5A7BB5";
     const ZoomRange = [1, 1];
     const LinksScale = 0.01;
-    var PointsScale = LinksScale;
-    const count = 11;
+    var PointsScale = LinksScale * 1.5;
+    const count = 10;
     const data_date = ["2019年12月", "2020年1月", "2020年2月", "2020年3月"];
 
     const img_person_id = load_img_pattern(svg, "img/person.png", "img-person");
@@ -495,9 +495,7 @@ function main() {
 
                 for (let i = people_count.length - 1; i >= 0; --i) {
                     people_count[i] /= people_count[0];
-                    people_count[i] *= 1.5;
                 }
-
                 let points_transition_scale = people_count;
 
                 return function (t) {
@@ -510,13 +508,14 @@ function main() {
                     if (points_dynamic_scale) {
                         for (let i = 1; i <= transition_scale_length; ++i) {
                             if (t * transition_scale_length <= i) {
-                                t = points_transition_scale[i - 1];
                                 d3.select(this)
                                     .attr("cx", point.x)
                                     .attr("cy", point.y)
                                     .attr(
                                         "r",
-                                        t * projection.scale() * PointsScale
+                                        PointsScale *
+                                            projection.scale() *
+                                            points_transition_scale[i - 1]
                                     );
 
                                 titlebox
@@ -543,7 +542,7 @@ function main() {
         svg.call(
             d3.drag().on("drag", () => {
                 const rotate = projection.rotate();
-                const k = Sensitivity / projection.scale() / 200;
+                const k = Sensitivity / projection.scale();
                 projection.rotate([
                     rotate[0] + d3.event.dx * k,
                     rotate[1] - d3.event.dy * k,
@@ -559,18 +558,17 @@ function main() {
                 if (d3.event.transform.k < ZoomRange[0]) {
                     d3.event.transform.k = ZoomRange[0];
                     var next_rotate = [-TaiwanCoords[0], -TaiwanCoords[1]];
-                    var flat = true;
                 } else if (d3.event.transform.k > ZoomRange[1]) {
                     d3.event.transform.k = ZoomRange[1];
                     var next_rotate = [
-                        -TaiwanCoords[0] - 130,
-                        -TaiwanCoords[1] - 15,
+                        -TaiwanCoords[0] - 60,
+                        -TaiwanCoords[1] - 40,
                     ];
-                    var flat = false;
                 }
 
                 if (next_rotate != curr_rotate) {
                     svg.selectAll("path").attr("d", function (d) {
+                        // don't apply transition to links and points
                         if (d3.select(this).attr("class") != "link") {
                             d3.select(this)
                                 .transition()
@@ -581,22 +579,9 @@ function main() {
                                         next_rotate
                                     );
 
-                                    if (flat) {
-                                        projection = three_d_map(
-                                            width / 2.5,
-                                            translation,
-                                            TaiwanCoords
-                                        );
-                                    } else {
-                                        projection = three_d_map(
-                                            width / 2.5,
-                                            translation,
-                                            TaiwanCoords
-                                        );
-                                    }
-
                                     return function (t) {
                                         projection.rotate(r(t));
+
                                         path = d3
                                             .geoPath()
                                             .projection(projection);
@@ -727,7 +712,7 @@ function main() {
             if (this.show == false) {
                 d3.select("#change-icon-btn").style("background", "none");
                 points.style("fill", point_color);
-                PointsScale = LinksScale;
+                PointsScale = LinksScale * 1.5;
                 titlebox
                     .select("circle")
                     .style("fill", point_color)
@@ -743,7 +728,7 @@ function main() {
 
                 d3.select("#change-icon-btn").style("background", "#7777");
                 points.style("fill", "url(#" + img_id + ")");
-                PointsScale = LinksScale * 2.5;
+                PointsScale = LinksScale * 3;
                 titlebox
                     .select("circle")
                     .style("fill", "url(#" + img_id + ")")
