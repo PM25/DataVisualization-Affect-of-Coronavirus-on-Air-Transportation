@@ -30,6 +30,7 @@ function main() {
     var rotation_btn;
     var change_icon_btn;
     var departure_btn;
+    var view_idx = 0;
 
     var files = [
         "https://unpkg.com/world-atlas@1/world/110m.json",
@@ -106,7 +107,7 @@ function main() {
             points = links_components[1];
 
         enable_scroll_effect(globe_bg, links, points);
-        rotation_btn = new Rotation_Btn();
+        rotation_btn = new Rotation_Btn(globe_bg);
         change_icon_btn = new Change_Icon_Btn(
             links_components,
             titlebox,
@@ -584,67 +585,67 @@ function main() {
             })
         ).call(
             d3.zoom().on("zoom", () => {
-                var curr_rotate = projection.rotate();
-
                 if (d3.event.transform.k > ZoomRange[0]) {
                     d3.event.transform.k = ZoomRange[0];
-                    var next_rotate = [-TaiwanCoords[0], -TaiwanCoords[1]];
-                    projection.scale(InitialScale);
-                    globe_bg.attr("r", projection.scale());
-                    var flat = true;
+                    switch_view(0, globe_bg);
                 } else if (d3.event.transform.k < ZoomRange[1]) {
                     d3.event.transform.k = ZoomRange[1];
-                    var next_rotate = [
-                        -TaiwanCoords[0] - 70,
-                        -TaiwanCoords[1] - 20,
-                    ];
-                    projection.scale(InitialScale * 0.7);
-                    globe_bg.attr("r", projection.scale());
-                    var flat = false;
-                }
-
-                if (next_rotate != curr_rotate) {
-                    svg.selectAll("path").attr("d", function (d) {
-                        // don't apply transition to links and points
-                        if (d3.select(this).attr("class") != "link") {
-                            d3.select(this)
-                                .transition()
-                                .duration(300)
-                                .attrTween("d", function (d) {
-                                    let r = d3.interpolate(
-                                        curr_rotate,
-                                        next_rotate
-                                    );
-
-                                    return function (t) {
-                                        projection.rotate(r(t));
-
-                                        path = d3
-                                            .geoPath()
-                                            .projection(projection);
-                                        let pathD = path(d);
-                                        return pathD == null ? "" : pathD;
-                                    };
-                                });
-                        } else {
-                            projection.rotate(next_rotate);
-                            path = d3.geoPath().projection(projection);
-                            let curr_link = d3.select(this);
-                            setTimeout(function () {
-                                curr_link.attr("d", path);
-                            }, 300);
-                        }
-                    });
+                    switch_view(1, globe_bg);
                 }
             })
         );
     }
 
-    function Rotation_Btn() {
+    function switch_view(idx, globe_bg) {
+        var curr_rotate = projection.rotate();
+
+        if (idx == 0) {
+            var next_rotate = [-TaiwanCoords[0], -TaiwanCoords[1]];
+            projection.scale(InitialScale);
+            globe_bg.attr("r", projection.scale());
+            var flat = true;
+        } else if (idx == 1) {
+            var next_rotate = [-TaiwanCoords[0] - 70, -TaiwanCoords[1] - 20];
+            projection.scale(InitialScale * 0.7);
+            globe_bg.attr("r", projection.scale());
+            var flat = false;
+        }
+
+        if (next_rotate != curr_rotate) {
+            svg.selectAll("path").attr("d", function (d) {
+                // don't apply transition to links and points
+                if (d3.select(this).attr("class") != "link") {
+                    d3.select(this)
+                        .transition()
+                        .duration(200)
+                        .attrTween("d", function (d) {
+                            let r = d3.interpolate(curr_rotate, next_rotate);
+
+                            return function (t) {
+                                projection.rotate(r(t));
+
+                                path = d3.geoPath().projection(projection);
+                                let pathD = path(d);
+                                return pathD == null ? "" : pathD;
+                            };
+                        });
+                } else {
+                    projection.rotate(next_rotate);
+                    path = d3.geoPath().projection(projection);
+                    let curr_link = d3.select(this);
+                    setTimeout(function () {
+                        curr_link.attr("d", path);
+                    }, 200);
+                }
+            });
+        }
+    }
+
+    function Rotation_Btn(globe_bg) {
         this.enable_rotation = false;
 
-        let rotation_timer = d3.interval(rotate, 50);
-        rotation_timer.stop();
+        // let rotation_timer = d3.interval(rotate, 2000);
+        // rotation_timer.stop();
 
         let rotation_btn = d3.select("#rotation-btn").on("click", function () {
             if (this.enable_rotate) {
@@ -653,17 +654,20 @@ function main() {
                 d3.select(this).style("background", "none");
             } else {
                 this.enable_rotate = true;
-                rotation_timer.restart(rotate);
+                rotation_timer = d3.interval(rotate, 6000);
                 d3.select(this).style("background", "#7777");
             }
         });
 
         function rotate(elapsed) {
-            const rotate = projection.rotate();
-            const k = Sensitivity / projection.scale();
-            projection.rotate([rotate[0] - k, rotate[1]]);
-            path = d3.geoPath().projection(projection);
-            svg.selectAll("path").attr("d", path);
+            // const rotate = projection.rotate();
+            // const k = Sensitivity / projection.scale();
+            // projection.rotate([rotate[0] - k, rotate[1]]);
+            // path = d3.geoPath().projection(projection);
+            // svg.selectAll("path").attr("d", path);
+            if (view_idx == 0) view_idx = 1;
+            else if (view_idx == 1) view_idx = 0;
+            switch_view(view_idx, globe_bg);
         }
 
         return rotation_btn;
