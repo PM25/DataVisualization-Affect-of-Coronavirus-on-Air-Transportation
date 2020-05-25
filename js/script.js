@@ -27,6 +27,10 @@ function main() {
     const img_person_id = load_img_pattern(svg, "img/person.png", "img-person");
     const img_plane_id = load_img_pattern(svg, "img/plane.png", "img-plane");
 
+    var rotation_btn;
+    var change_icon_btn;
+    var departure_btn;
+
     var files = [
         "https://unpkg.com/world-atlas@1/world/110m.json",
         "data/flights.csv",
@@ -102,13 +106,13 @@ function main() {
             points = links_components[1];
 
         enable_scroll_effect(globe_bg, links, points);
-        var rotation_btn = new Rotation_Btn();
-        var change_icon_btn = new Change_Icon_Btn(
+        rotation_btn = new Rotation_Btn();
+        change_icon_btn = new Change_Icon_Btn(
             links_components,
             titlebox,
             point_color
         );
-        var departure_btn = new Departure_Btn(
+        departure_btn = new Departure_Btn(
             flights_data_dict,
             links_components,
             in_links,
@@ -351,6 +355,7 @@ function main() {
 
         // TODO: Modifiy below code.
         console.log(flight_data["name"]);
+        console.log(departure_btn.departure);
         infobox.select("svg");
     }
 
